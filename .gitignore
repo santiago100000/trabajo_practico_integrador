@@ -218,3 +218,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Proyecto Bodegas del Atuel
+.env
+*.sql.gz
+dump_completo*

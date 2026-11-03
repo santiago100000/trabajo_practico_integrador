@@ -41,13 +41,3 @@ id_lote surrogate en lote_uva. Lo agregué para que analisis_calidad (su entidad
 Entidades débiles con PK compuesta. Reflejan la dependencia de existencia del DER y evitan análisis o permisos huérfanos.
 Estados en varchar. Como no me indicaste los valores posibles, no inventé enums ni tablas de estados.
 Si quisieras congelar los totales del comprobante por razones fiscales, sería una desnormalización consciente. Hoy el esquema es estrictamente 3FN.
-4. Interpretaciones que conviene que revises
-Cardinalidades “1:1” de emite (Sala → Comprobante) y transporta (Transportista → Comprobante). Las traté como 1:N, porque una sala o un transportista maneja muchos comprobantes. comprobante.id_transportista quedó opcional.
-Sala de Venta “tiene” Bodega. La etiqueta 1:N es ambigua. Lo modelé como Bodega 1:N Sala (sala_venta.id_bodega). Si en realidad una sala vende vinos de varias bodegas, habría que cambiarlo por una tabla intermedia.
-despacha, destinado_a y genera en Transferencia. despacha y destinado_a no tienen conectores. Los resolví con dos FK en transferencia: id_deposito (origen) e id_sala (destino/solicitante).
-Transferencia no tiene relación con Vino. Solo tiene volumen_litros. Si necesitás saber qué vinos y cuántos se transfieren, falta una tabla detalle_transferencia (como las otras M:N).
-Atributos que agregué porque el DER no los traía: cantidad en detalle_ingreso y cantidad_disponible en stock_deposito. Sin ellos esas tablas solo guardarían pares de claves.
-nombre_vino en Maridaje. Lo interpreté como el nombre del maridaje (maridaje.nombre).
-Exportador. Tiene cuit y Cliente tiene tipo_doc y nro_doc. Si tipo_doc = 'CUIT', el dato queda duplicado. Si es así, conviene eliminar exportador.cuit.
-pais_destino y dia_cierre. Los dejé de un solo valor. Si un exportador opera con varios países, o una sala cierra más de un día, cada uno necesita su tabla.
-encargado_regional en Localidad. Lo mantuve ahí. Si en realidad es un encargado por provincia, sería una dependencia transitiva y habría que moverlo a provincia.

@@ -1,0 +1,53 @@
+Justificación
+1. Reglas de transformación aplicadas
+Entidad fuerte: pasa a ser una tabla con su identificador como PK.
+Atributo compuesto: se descompone en atributos simples. direccion de Sala de Venta pasa a calle y numero.
+Relación 1:N: la FK va en el lado N (por ejemplo vino.id_bodega, finca.id_bodega, empleado.id_bodega).
+Relación M:N: pasa a tabla intermedia con PK compuesta y los atributos de la relación. Son parcela_cepa, vino_cepa, vino_maridaje, stock_sala, stock_deposito, detalle_ingreso, detalle_comprobante y transportista_localidad.
+Entidad débil: la PK hereda la de la entidad fuerte más la clave parcial.
+parcela tiene PK (id_finca, nro_parcela).
+analisis_calidad tiene PK (id_lote, id_analisis).
+auditoria_precio tiene PK (cod_vino, id_auditoria).
+permiso_exportacion tiene PK (id_cliente, codigo).
+Generalización de Cliente: una tabla cliente con lo común y una tabla por subtipo (exportador, socio, distribuidor). En cada subtipo la PK es a la vez FK a cliente.
+2. Normalización
+
+1FN. Todos los atributos son atómicos y no hay grupos repetidos.
+
+direccion compuesta pasó a calle y numero.
+Las relaciones M:N se resolvieron con tablas intermedias, así que ninguna celda guarda listas.
+
+2FN. Ninguna tabla tiene dependencias parciales sobre una PK compuesta.
+
+En el DER, nombre_finca aparece como atributo de Parcela. Depende solo de id_finca, que es parte de la PK de parcela. Lo eliminé porque se obtiene de finca.
+nro_parcela dentro de Lote_uva no es un atributo propio, es la referencia a la parcela. Se convirtió en la FK compuesta (id_finca, nro_parcela).
+
+3FN. Ningún atributo no clave depende de otro atributo no clave.
+
+Finca (provincia, departamento): id_finca → departamento → provincia, que es una dependencia transitiva. Extraje provincia y departamento a tablas propias, y finca apunta a departamento. localidad también apunta a provincia. Así el nombre de una provincia se guarda una sola vez y no hay variantes como “Mendoza” y “mendoza”.
+Atributos derivados: subtotal y total del comprobante, y subtotal_renglon del detalle, se calculan a partir de otros datos.
+subtotal_renglon = cantidad × precio_unitario × (1 − descuento_aplicado).
+subtotal = SUM(subtotal_renglon).
+total = subtotal × (1 − descuento).
+Guardarlos permite que se desincronicen, así que los quité y se resuelven con una vista o una consulta.
+Duplicados de concepto:
+En Vino, año_cosecha y añada son lo mismo, y dejé anada.
+En Comprobante, fecha y fecha_emisión también eran lo mismo, y dejé fecha_emision.
+3. Decisiones de diseño
+Claves sustitutas (id_*) en entidades fuertes. Los CUIT, CUIL y números de documento pueden cambiar o tener formatos distintos, por eso los dejé como UNIQUE y no como PK. A Bodega le agregué id_bodega porque el DER no traía PK. Para Vino mantuve cod_vino, como en el DER.
+precio_unitario en el detalle del comprobante. No es redundante con vino.precio. Es el precio histórico al momento de la venta, y sin él el comprobante cambiaría cada vez que se actualiza el precio del vino. Lo mismo pasa con descuento_aplicado frente a cliente.descuento.
+lote_uva.id_bodega. Conserva la relación “entregado_a” y no es redundante con la bodega dueña de la finca, porque el lote puede entregarse a otra bodega.
+id_lote surrogate en lote_uva. Lo agregué para que analisis_calidad (su entidad débil) tenga una FK simple, y mantuve la unicidad con UNIQUE (id_finca, nro_parcela, nro_lote).
+Entidades débiles con PK compuesta. Reflejan la dependencia de existencia del DER y evitan análisis o permisos huérfanos.
+Estados en varchar. Como no me indicaste los valores posibles, no inventé enums ni tablas de estados.
+Si quisieras congelar los totales del comprobante por razones fiscales, sería una desnormalización consciente. Hoy el esquema es estrictamente 3FN.
+4. Interpretaciones que conviene que revises
+Cardinalidades “1:1” de emite (Sala → Comprobante) y transporta (Transportista → Comprobante). Las traté como 1:N, porque una sala o un transportista maneja muchos comprobantes. comprobante.id_transportista quedó opcional.
+Sala de Venta “tiene” Bodega. La etiqueta 1:N es ambigua. Lo modelé como Bodega 1:N Sala (sala_venta.id_bodega). Si en realidad una sala vende vinos de varias bodegas, habría que cambiarlo por una tabla intermedia.
+despacha, destinado_a y genera en Transferencia. despacha y destinado_a no tienen conectores. Los resolví con dos FK en transferencia: id_deposito (origen) e id_sala (destino/solicitante).
+Transferencia no tiene relación con Vino. Solo tiene volumen_litros. Si necesitás saber qué vinos y cuántos se transfieren, falta una tabla detalle_transferencia (como las otras M:N).
+Atributos que agregué porque el DER no los traía: cantidad en detalle_ingreso y cantidad_disponible en stock_deposito. Sin ellos esas tablas solo guardarían pares de claves.
+nombre_vino en Maridaje. Lo interpreté como el nombre del maridaje (maridaje.nombre).
+Exportador. Tiene cuit y Cliente tiene tipo_doc y nro_doc. Si tipo_doc = 'CUIT', el dato queda duplicado. Si es así, conviene eliminar exportador.cuit.
+pais_destino y dia_cierre. Los dejé de un solo valor. Si un exportador opera con varios países, o una sala cierra más de un día, cada uno necesita su tabla.
+encargado_regional en Localidad. Lo mantuve ahí. Si en realidad es un encargado por provincia, sería una dependencia transitiva y habría que moverlo a provincia.

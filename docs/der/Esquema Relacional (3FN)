@@ -1,21 +1,58 @@
 // =====================================================
-// Esquema relacional (3FN) - derivado del DER de bodega/vinos
+// Esquema relacional 3FN - Bodegas del Atuel (v2)
 // =====================================================
+
+Enum estado_documento {
+  en_confeccion
+  terminado
+  procesado
+}
+
+Enum tipo_vino {
+  tinto
+  blanco
+  rosado
+  espumante
+}
+
+Enum tipo_cepa {
+  tinta
+  blanca
+}
+
+Enum tipo_cliente {
+  socio
+  distribuidor
+  exportador
+}
+
+Enum tipo_documento {
+  DNI
+  CUIT
+  CUIL
+  PASAPORTE
+}
+
+Enum dia_semana {
+  lunes
+  martes
+  miercoles
+  jueves
+  viernes
+  sabado
+  domingo
+}
 
 // ---------- GEOGRAFIA ----------
 Table provincia {
   id_provincia int [pk, increment]
-  nombre varchar(80) [not null, unique]
+  nombre varchar(80) [not null]
 }
 
 Table departamento {
   id_departamento int [pk, increment]
   id_provincia int [not null, ref: > provincia.id_provincia]
   nombre varchar(80) [not null]
-
-  indexes {
-    (id_provincia, nombre) [unique]
-  }
 }
 
 Table localidad {
@@ -23,118 +60,98 @@ Table localidad {
   id_provincia int [not null, ref: > provincia.id_provincia]
   nombre varchar(100) [not null]
   codigo_postal varchar(10) [not null]
-  encargado_regional varchar(100)
-
-  indexes {
-    (id_provincia, nombre, codigo_postal) [unique]
-  }
+  encargado_regional varchar(100) [not null, note: 'FD: id_localidad -> encargado_regional']
 }
 
-// ---------- BODEGA Y PRODUCCION ----------
-Table bodega {
-  id_bodega int [pk, increment]
-  razon_social varchar(150) [not null]
-  cuit varchar(13) [not null, unique]
-  domicilio varchar(200)
+// ---------- SALAS Y EMPLEADOS ----------
+Table sala_venta {
+  id_sala int [pk, increment]
+  id_localidad int [not null, ref: > localidad.id_localidad]
+  calle varchar(120) [not null]
+  numero varchar(10) [not null]
+  dia_cierre dia_semana [not null]
 }
 
 Table empleado {
   id_empleado int [pk, increment]
-  id_bodega int [not null, ref: > bodega.id_bodega]
+  id_sala int [not null, ref: > sala_venta.id_sala, note: 'RN-03']
+  cuit char(11) [not null]
   nombre varchar(80) [not null]
   apellido varchar(80) [not null]
-  cuil varchar(13) [not null, unique]
   fecha_ingreso date [not null]
-  salario decimal(12,2)
+  salario numeric(12,2) [not null]
 }
 
+// ---------- BODEGAS ----------
+Table bodega {
+  id_bodega int [pk, increment]
+  cuit char(11) [not null]
+  razon_social varchar(150) [not null]
+  domicilio varchar(200) [not null]
+}
+
+// ---------- PRODUCCION DE UVA ----------
 Table finca {
   id_finca int [pk, increment]
-  id_bodega int [not null, ref: > bodega.id_bodega]
   id_departamento int [not null, ref: > departamento.id_departamento]
   nombre varchar(100) [not null]
-  superficie decimal(10,2)
+  superficie_ha numeric(10,2) [not null]
 }
 
-// Entidad debil de finca (relacion identificadora "integra")
+Table cepa {
+  id_cepa int [pk, increment]
+  nombre varchar(80) [not null]
+  tipo tipo_cepa [not null]
+}
+
 Table parcela {
   id_finca int [not null, ref: > finca.id_finca]
   nro_parcela int [not null]
-  superficie decimal(10,2)
-  anio_plantacion int
+  id_cepa int [not null, ref: > cepa.id_cepa]
+  superficie_ha numeric(10,2) [not null]
+  anio_plantacion smallint [not null]
 
   indexes {
     (id_finca, nro_parcela) [pk]
   }
 }
 
-Table cepa {
-  id_cepa int [pk, increment]
-  nombre varchar(80) [not null, unique]
-  tipo varchar(50)
-  descripcion text
-}
-
-// M:N "cultiva"
-Table parcela_cepa {
-  id_finca int [not null]
-  nro_parcela int [not null]
-  id_cepa int [not null, ref: > cepa.id_cepa]
-
-  indexes {
-    (id_finca, nro_parcela, id_cepa) [pk]
-  }
-}
-Ref: parcela_cepa.(id_finca, nro_parcela) > parcela.(id_finca, nro_parcela)
-
 Table lote_uva {
-  id_lote int [pk, increment]
+  nro_lote int [pk, increment]
   id_finca int [not null]
   nro_parcela int [not null]
-  nro_lote int [not null]
-  id_bodega int [ref: > bodega.id_bodega, note: 'Bodega a la que fue entregado el lote (entregado_a)']
-  fecha date [not null]
-  campania varchar(20) [not null]
-  kilos_cosechados decimal(12,2) [not null]
-
-  indexes {
-    (id_finca, nro_parcela, nro_lote) [unique]
-  }
+  campania smallint [not null, note: 'UNIQUE (id_finca, nro_parcela, campania) en etapa 2']
+  fecha_cosecha date [not null]
+  kilos_cosechados numeric(12,2) [not null]
+  id_bodega int [not null, ref: > bodega.id_bodega, note: 'bodega a la que fue entregado']
 }
 Ref: lote_uva.(id_finca, nro_parcela) > parcela.(id_finca, nro_parcela)
 
-// Entidad debil de lote_uva (relacion identificadora "sometido_a")
 Table analisis_calidad {
-  id_lote int [not null, ref: > lote_uva.id_lote]
-  id_analisis int [not null, note: 'Numeracion dentro de cada lote']
+  id_analisis int [pk, increment]
+  nro_lote int [not null, ref: > lote_uva.nro_lote]
   fecha_analisis date [not null]
-  ph decimal(4,2)
-  brix decimal(5,2)
-  acidez_total decimal(5,2)
-  resultado varchar(100)
-
-  indexes {
-    (id_lote, id_analisis) [pk]
-  }
+  brix numeric(5,2) [not null]
+  ph numeric(4,2) [not null]
+  acidez_total numeric(5,2) [not null, note: 'g/L']
 }
 
 // ---------- VINOS ----------
 Table vino {
   cod_vino int [pk, increment]
   id_bodega int [not null, ref: > bodega.id_bodega]
-  nombre varchar(120) [not null]
-  anada int [note: 'Unifica anio_cosecha y anada del DER']
-  tipo_vino varchar(50)
-  precio decimal(12,2) [not null]
-  volumen_ml int
-  graduacion_alcoholica decimal(4,2)
+  nombre varchar(80) [not null]
+  tipo tipo_vino [not null]
+  anada smallint [not null]
+  volumen_ml int [not null]
+  graduacion numeric(4,2) [not null]
+  precio numeric(12,2) [not null, note: 'RN-01']
 }
 
-// M:N "compuesta_por"
 Table vino_cepa {
   cod_vino int [not null, ref: > vino.cod_vino]
   id_cepa int [not null, ref: > cepa.id_cepa]
-  porcentaje decimal(5,2) [not null]
+  porcentaje numeric(5,2) [not null, note: 'RN-05: suma 100 por vino']
 
   indexes {
     (cod_vino, id_cepa) [pk]
@@ -143,168 +160,140 @@ Table vino_cepa {
 
 Table maridaje {
   id_maridaje int [pk, increment]
-  nombre varchar(120) [not null, unique]
+  nombre varchar(80) [not null]
+  temperatura_servicio numeric(4,1) [not null, note: 'grados C']
 }
 
-// M:N "tiene"
 Table vino_maridaje {
   cod_vino int [not null, ref: > vino.cod_vino]
   id_maridaje int [not null, ref: > maridaje.id_maridaje]
-  temperatura_servicio decimal(4,1)
 
   indexes {
     (cod_vino, id_maridaje) [pk]
   }
 }
 
-// Entidad debil de vino (relacion identificadora "registra_cambio")
 Table auditoria_precio {
+  id_auditoria int [pk, increment]
   cod_vino int [not null, ref: > vino.cod_vino]
-  id_auditoria int [not null, note: 'Numeracion dentro de cada vino']
-  fecha_modificacion timestamp [not null]
-  precio_anterior decimal(12,2) [not null]
-  precio_nuevo decimal(12,2) [not null]
-  motivo_cambio varchar(200)
-
-  indexes {
-    (cod_vino, id_auditoria) [pk]
-  }
+  precio_anterior numeric(12,2) [not null]
+  precio_nuevo numeric(12,2) [not null]
+  fecha_hora timestamp [not null]
+  usuario varchar(63) [not null]
+  Note: 'La completa un trigger AFTER UPDATE (RN-13)'
 }
 
-// ---------- SALAS, DEPOSITO, STOCK ----------
-Table sala_venta {
-  id_sala int [pk, increment]
-  id_bodega int [not null, ref: > bodega.id_bodega]
-  id_localidad int [not null, ref: > localidad.id_localidad]
-  nombre varchar(100) [not null]
-  calle varchar(120) [not null]
-  numero varchar(10)
-  dia_cierre varchar(15)
-}
-
-Table deposito_central {
-  id_deposito int [pk, increment]
-  direccion varchar(200) [not null]
-}
-
-// M:N "tiene_stock"
+// ---------- STOCK ----------
 Table stock_sala {
   id_sala int [not null, ref: > sala_venta.id_sala]
   cod_vino int [not null, ref: > vino.cod_vino]
-  cantidad_disponible int [not null, default: 0]
+  cantidad int [not null]
 
   indexes {
     (id_sala, cod_vino) [pk]
   }
 }
 
-// M:N "tiene_stock_deposito"
 Table stock_deposito {
-  id_deposito int [not null, ref: > deposito_central.id_deposito]
-  cod_vino int [not null, ref: > vino.cod_vino]
-  cantidad_disponible int [not null, default: 0, note: 'Atributo agregado: el DER no lo trae']
-
-  indexes {
-    (id_deposito, cod_vino) [pk]
-  }
+  cod_vino int [pk, ref: > vino.cod_vino]
+  cantidad int [not null]
+  Note: 'Un solo deposito central: el stock se identifica por vino'
 }
 
-Table transferencia {
-  id_transferencia int [pk, increment]
-  num_solicitud varchar(20) [not null, unique]
-  id_sala int [not null, ref: > sala_venta.id_sala, note: 'genera / destinado_a']
-  id_deposito int [not null, ref: > deposito_central.id_deposito, note: 'despacha']
-  fecha_confeccion date [not null]
-  fecha_hora timestamp
-  volumen_litros decimal(12,2)
-  estado varchar(30) [not null]
-  observaciones text
-}
-
-// ---------- TRANSPORTISTA E INGRESOS ----------
+// ---------- TRANSPORTISTAS ----------
 Table transportista {
-  id_transportista int [pk, increment]
+  cod_transportista int [pk, increment]
   razon_social varchar(150) [not null]
-  cuit varchar(13) [not null, unique]
-  domicilio varchar(200)
-  email varchar(120)
-  telefono varchar(30)
+  cuit char(11) [not null]
+  email varchar(120) [not null]
+  telefono varchar(30) [not null]
+  domicilio varchar(200) [not null]
 }
 
-// M:N "cubre"
 Table transportista_localidad {
-  id_transportista int [not null, ref: > transportista.id_transportista]
+  cod_transportista int [not null, ref: > transportista.cod_transportista]
   id_localidad int [not null, ref: > localidad.id_localidad]
 
   indexes {
-    (id_transportista, id_localidad) [pk]
+    (cod_transportista, id_localidad) [pk]
   }
 }
 
+// ---------- INGRESOS ----------
 Table ingreso {
-  id_ingreso int [pk, increment]
-  id_bodega int [not null, ref: > bodega.id_bodega, note: 'emitido_por']
-  id_transportista int [not null, ref: > transportista.id_transportista, note: 'efectua']
-  id_deposito int [not null, ref: > deposito_central.id_deposito]
-  fecha_ingreso date [not null]
-  estado varchar(30) [not null]
+  cod_ingreso int [pk, increment]
+  fecha date [not null]
+  estado estado_documento [not null]
+  cod_transportista int [not null, ref: > transportista.cod_transportista]
+  id_bodega int [not null, ref: > bodega.id_bodega, note: 'bodega de origen']
   observaciones text
 }
 
-// M:N "contiene" (ingreso - vino)
-Table detalle_ingreso {
-  id_ingreso int [not null, ref: > ingreso.id_ingreso]
+Table renglon_ingreso {
+  cod_ingreso int [not null, ref: > ingreso.cod_ingreso]
   cod_vino int [not null, ref: > vino.cod_vino]
-  cantidad int [not null, note: 'Atributo agregado: el DER no lo trae']
+  cantidad int [not null]
 
   indexes {
-    (id_ingreso, cod_vino) [pk]
+    (cod_ingreso, cod_vino) [pk]
   }
 }
 
-// ---------- CLIENTES (generalizacion) ----------
+// ---------- TRANSFERENCIAS ----------
+Table transferencia {
+  nro_solicitud int [pk, increment]
+  id_sala int [not null, ref: > sala_venta.id_sala, note: 'sala solicitante']
+  fecha_confeccion date [not null, note: 'RN-11: la fija un trigger']
+  estado estado_documento [not null]
+  observaciones text
+}
+
+Table renglon_transferencia {
+  nro_solicitud int [not null, ref: > transferencia.nro_solicitud]
+  cod_vino int [not null, ref: > vino.cod_vino]
+  cantidad int [not null]
+
+  indexes {
+    (nro_solicitud, cod_vino) [pk]
+  }
+}
+
+// ---------- CLIENTES ----------
 Table cliente {
   id_cliente int [pk, increment]
-  id_localidad int [not null, ref: > localidad.id_localidad, note: 'reside_en']
-  tipo_doc varchar(10) [not null]
+  tipo_cliente tipo_cliente [not null, note: 'discriminador']
+  nombre_razon_social varchar(150) [not null]
+  tipo_doc tipo_documento [not null]
   nro_doc varchar(20) [not null]
-  razon_social varchar(150) [not null]
-  direccion varchar(200)
+  direccion varchar(200) [not null]
+  id_localidad int [not null, ref: > localidad.id_localidad]
+  fecha_alta date [not null]
+  descuento numeric(5,2) [not null, note: 'RN-06: default segun fn_descuento_cliente']
   email varchar(120)
   telefono varchar(30)
-  fecha_alta date [not null]
-  descuento decimal(5,2) [default: 0]
-
-  indexes {
-    (tipo_doc, nro_doc) [unique]
-  }
-}
-
-Table exportador {
-  id_cliente int [pk, ref: - cliente.id_cliente]
-  cuit varchar(13) [not null]
-  pais_destino varchar(80) [not null]
 }
 
 Table socio {
-  id_cliente int [pk, ref: - cliente.id_cliente]
-  zona varchar(80)
-  habilitacion varchar(80)
+  id_cliente int [pk, ref: > cliente.id_cliente]
+  Note: 'Sin atributos propios: representa el subtipo'
 }
 
 Table distribuidor {
-  id_cliente int [pk, ref: - cliente.id_cliente]
-  zona_cobertura varchar(120)
-  habilitacion varchar(80)
+  id_cliente int [pk, ref: > cliente.id_cliente]
+  zona_cobertura varchar(120) [not null]
+  nro_habilitacion varchar(30) [not null]
 }
 
-// Entidad debil de exportador (relacion identificadora "posee")
+Table exportador {
+  id_cliente int [pk, ref: > cliente.id_cliente]
+  pais_destino varchar(80) [not null]
+}
+
 Table permiso_exportacion {
   id_cliente int [not null, ref: > exportador.id_cliente]
   codigo varchar(30) [not null]
   fecha_emision date [not null]
   fecha_vencimiento date [not null]
-  estado varchar(30) [not null]
 
   indexes {
     (id_cliente, codigo) [pk]
@@ -313,24 +302,24 @@ Table permiso_exportacion {
 
 // ---------- COMPROBANTES ----------
 Table comprobante {
-  id_comprobante int [pk, increment]
-  numero varchar(30) [not null, unique]
-  id_cliente int [not null, ref: > cliente.id_cliente, note: 'emite']
-  id_sala int [not null, ref: > sala_venta.id_sala, note: 'emite']
-  id_transportista int [ref: > transportista.id_transportista, note: 'transporta (opcional)']
-  fecha_emision date [not null, note: 'Unifica fecha y fecha_emision del DER']
-  descuento decimal(5,2) [default: 0]
+  nro_comprobante int [pk, increment]
+  fecha date [not null]
+  id_cliente int [not null, ref: > cliente.id_cliente]
+  id_sala int [not null, ref: > sala_venta.id_sala]
+  subtotal numeric(12,2) [not null, note: 'mantenido por trigger (RN-08)']
+  descuento numeric(12,2) [not null, note: 'importe']
+  total numeric(12,2) [not null, note: 'mantenido por trigger (RN-08)']
 }
 
-// M:N "contiene" (comprobante - vino)
-Table detalle_comprobante {
-  id_comprobante int [not null, ref: > comprobante.id_comprobante]
+Table renglon_comprobante {
+  nro_comprobante int [not null, ref: > comprobante.nro_comprobante]
   cod_vino int [not null, ref: > vino.cod_vino]
   cantidad int [not null]
-  precio_unitario decimal(12,2) [not null]
-  descuento_aplicado decimal(5,2) [default: 0]
+  precio_unitario numeric(12,2) [not null, note: 'precio al momento de la venta']
+  descuento_aplicado numeric(5,2) [not null, note: '% segun tipo de cliente']
+  subtotal numeric(12,2) [not null, note: 'cantidad * precio * (1 - desc/100)']
 
   indexes {
-    (id_comprobante, cod_vino) [pk]
+    (nro_comprobante, cod_vino) [pk]
   }
 }

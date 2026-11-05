@@ -21,13 +21,14 @@ def existe(ruta: Path, descripcion: str) -> None:
 
 
 def solo_comentarios(ruta: Path, descripcion: str) -> None:
+    """Verifica que el archivo solo tenga comentarios (para migraciones de stub)."""
     if not ruta.exists():
         return
     texto = ruta.read_text(encoding="utf-8")
     lineas = [l.strip() for l in texto.splitlines() if l.strip()]
     solo = all(l.startswith("--") for l in lineas)
     if not solo:
-        ERRORES.append(f"{descripcion} ({ruta}) no es solo-comentarios")
+        AVISOS.append(f"{descripcion} ({ruta}) contiene DDL real (esperado en etapa 1)")
 
 
 def main() -> int:

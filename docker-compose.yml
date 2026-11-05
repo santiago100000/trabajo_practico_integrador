@@ -75,6 +75,8 @@ services:
       DB_HOST: db
       DB_PORT: 5432
       SEED: ${SEED:-42}
+      SEED_CLIENTES: ${SEED_CLIENTES:-20000}
+      SEED_COMPROBANTES: ${SEED_COMPROBANTES:-150000}
     depends_on:
       db:
         condition: service_healthy

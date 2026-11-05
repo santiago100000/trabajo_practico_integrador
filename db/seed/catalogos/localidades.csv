@@ -1,2 +1,17 @@
 nombre,provincia,codigo_postal
--- TODO: cargar códigos postales reales de Mendoza (no inventar). Fuente: Correo Argentino.
+Mendoza,Mendoza,5500
+Godoy Cruz,Mendoza,5507
+Luján de Cuyo,Mendoza,5509
+Maipú,Mendoza,5515
+San Rafael,Mendoza,5600
+Tunuyán,Mendoza,5620
+San Carlos,Mendoza,5650
+Lavalle,Mendoza,5610
+Rivadavia,Mendoza,5605
+Junín,Mendoza,5660
+Santa Rosa,Mendoza,5660
+General Alvear,Mendoza,5630
+San Martín,Mendoza,5540
+Las Heras,Mendoza,5522
+Guaymallén,Mendoza,5509
+La Paz,Mendoza,5660

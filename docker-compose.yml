@@ -35,6 +35,7 @@ services:
       PGPASSWORD: ${POSTGRES_PASSWORD}
       APP_PASSWORD: ${APP_DB_PASSWORD}
       RO_PASSWORD: ${RO_DB_PASSWORD}
+      OWNER_PASSWORD: ${OWNER_DB_PASSWORD}
     entrypoint: ["/migrate_entrypoint.sh"]
 
   api:

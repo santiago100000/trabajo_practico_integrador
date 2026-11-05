@@ -27,9 +27,12 @@ for f in /migrations/0*.sql; do
     continue
   fi
   echo "  Aplicando: $nombre"
-  psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" \
-    -v app_password="$APP_PASSWORD" -v ro_password="$RO_PASSWORD" \
-    -v ON_ERROR_STOP=1 -f "$f"
+  # Inyectar contraseñas desde variables de entorno (nunca escritas en los .sql)
+  sed -e "s/@OWNER_PASSWORD@/$OWNER_PASSWORD/g" \
+      -e "s/@APP_PASSWORD@/$APP_PASSWORD/g" \
+      -e "s/@RO_PASSWORD@/$RO_PASSWORD/g" \
+      "$f" | psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" \
+    -v ON_ERROR_STOP=1 -f -
   psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -v ON_ERROR_STOP=1 \
     -c "INSERT INTO ops.schema_migrations (nombre_archivo) VALUES ('$nombre');"
 done

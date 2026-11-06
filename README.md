@@ -46,11 +46,13 @@ docker compose exec db psql -U bodegas_owner -d bodegas -f /tests/db_tests.sql
 
 - Base de datos: http://localhost:${DB_PORT} (default 5433)
 
-## Tabla de hitos (hasta Etapa 3)
+## Tabla de hitos
 
 - [x] H1: Scaffolding inicial (este repositorio)
 - [x] H2: Esquema, restricciones, funciones, procedimientos, triggers, vistas y roles (001 a 007)
 - [x] H3: Carga masiva de datos (db/seed/ con catálogos CSV y seed.py con Faker)
+- [x] H4: Índices y rendimiento (db/migrations/008_indices.sql, informe con planes EXPLAIN antes/después)
+- [x] H5: Consultas SQL (consultas/select.sql, insert.sql, update.sql, delete.sql con S1-S12, I1-I6, U1-U6, D1-D6)
 
 ## Decisiones
 
@@ -61,4 +63,4 @@ docker compose exec db psql -U bodegas_owner -d bodegas -f /tests/db_tests.sql
 
 ## Despliegue en la nube
 
-Pendiente (Etapa 8).
+No aplica. El sistema está diseñado para funcionar únicamente en entorno local con Docker y Docker Compose. No hay etapa 8 de despliegue en la nube.

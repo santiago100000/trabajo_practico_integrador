@@ -107,8 +107,3 @@ CREATE INDEX idx_renglon_transferencia_cod_vino
 --   5. idx_renglon_comprobante_nro_brin → BRIN (nro_comprobante)             → consultas de rango
 --   6. idx_renglon_transferencia_cod_vino → sobre FK (cod_vino)              → S4
 -- =============================================================================
-```
-
-Ahora verifico que la sintaxis SQL sea válida y luego hago commit y push.
-<tool_call>
-<function=shell>

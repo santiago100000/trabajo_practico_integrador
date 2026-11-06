@@ -3,13 +3,13 @@
 ## Estado general del repositorio
 
 **Rama:** `main`  
-**Último commit:** `1c48984` (Etapa 4: pasos 1 y 2 - selección de consultas y medición inicial EXPLAIN)  
+**Último commit:** `22e3e48` (Etapa 5: optimizar S12a y actualizar informe EXPLAIN)  
 **Push a `origin/main`:** ✅ Sincronizado  
 **Última actualización:** 06/11/2026  
 
-**Etapas completadas:** 1, 2, 3  
-**Etapa en curso:** 4 (pasos 1 y 2 hechos; pasos 3 a 8 pendientes)  
-**Etapas pendientes:** 5, 6, 7, 8, 9  
+**Etapas completadas:** 1, 2, 3, 4, 5  
+**Etapa en curso:** ninguna  
+**Etapas pendientes:** 6, 7, 9 (etapa 8 de despliegue en la nube descartada)  
 
 ---
 
@@ -127,7 +127,7 @@
 
 ---
 
-## Etapa 4: Índices y rendimiento — EN CURSO
+## Etapa 4: Índices y rendimiento — COMPLETADA ✅
 
 **Pasos completados:**
 
@@ -178,30 +178,58 @@
 - `db/migrations/008_indices.sql` (6 índices creados con justificación)
 - `docs/informes/informe_etapa4_indices.md` (pasos 1 a 8 completos con resultados reales)
 
-**Commit y push:** `66ff4f2` — Push a `origin/main` ✅
+**Commit y push:** `66ff4f2` (etapa 4) y `22e3e48` (etapa 5) — Push a `origin/main` ✅
 
 ---
 
-## Cambios estructurales realizados (reducción a etapas 1-3)
+## Etapa 5: Consultas SQL — COMPLETADA ✅
 
-- Eliminadas etapas 4 a 9 del repositorio (`api/`, `front/`, `consultas/`, `db/migrations/008_indices.sql` original, `docs/informes/informe_final.md`, `docs/informes/informe_etapa4_indices.md` original)
-- `docker-compose.yml`: solo servicios `db`, `migrate` y `seed` (profile `seed`)
-- `README.md`: hitos solo hasta H3, decisiones corregidas (migraciones con DDL real, no stubs), despliegue en nube marcado como pendiente
-- `CARPETA TEMPORAL/`: solo `progreso.md` y `PROGRESO_ETAPA3.md` trackeados en el repo; el resto es referencia local
-- `.gitignore`: ignora `/CARPETA TEMPORAL/` excepto `progreso.md` y `PROGRESO_ETAPA3.md`
+**Fecha:** 06/11/2026
+
+### Consultas implementadas
+
+| Archivo | Consultas | Cantidad |
+|---------|-----------|----------|
+| `consultas/select.sql` | S1 a S12 | 12 SELECT |
+| `consultas/insert.sql` | I1 a I6 | 6 INSERT |
+| `consultas/update.sql` | U1 a U6 | 6 UPDATE |
+| `consultas/delete.sql` | D1 a D6 | 6 DELETE |
+
+**Total:** 30 consultas SQL comentadas con enunciado, estrategia y consultas de control previa/posterior.
+
+**Optimización aplicada:**
+- S12a (clientes que compraron todos los vinos de una bodega) fue reescrita de `NOT EXISTS` correlionado doble (que generaba timeout >120s en EXPLAIN ANALYZE) a `GROUP BY` + `HAVING COUNT(DISTINCT ...)` para evitar planes de costo excesivo.
+
+**Informe EXPLAIN:**
+- `docs/informes/informe_etapa5_explain.md` documenta los planes de ejecución para S1, S4, S8, S9, S10, S11, S12a y S12b.
+
+**Commit y push:** `22e3e48` — Push a `origin/main` ✅
+
+**Criterios de aceptación Etapa 5:**
+- Archivos INSERT, UPDATE, DELETE y SELECT comentados ✅
+- Consultas avanzadas (división relacional, funciones de ventana, CTE, anti-join) implementadas ✅
+- S12a optimizada para evitar timeout ✅
 
 ---
 
-**Informes creados (etapas 1-3):**
+## Cambios estructurales realizados
+
+- `docker-compose.yml`: servicios `db`, `migrate` y `seed` (profile `seed`)
+- `README.md`: hitos actualizados hasta H5, decisiones corregidas (migraciones con DDL real, no stubs), despliegue en nube marcado como pendiente
+- `CARPETA TEMPORAL/`: `progreso.md` y documentos de referencia trackeados en el repo
+- `.gitignore`: ignora `/CARPETA TEMPORAL/` excepto `progreso.md`, `DOCKER_VARIABLES_PUERTOS_REDES.md`, `explicacion.md`, `reglas_del_proyecto_bodegas_del_atuel.txt`, `TPI_Bodegas_del_Atuel.md`
+
+---
+
+**Informes creados (etapas 1-5):**
 - `docs/informes/informe_etapa1_modelado.md` — Modelo, normalización, diccionario, decisiones de diseño.
 - `docs/informes/informe_etapa2_integridad.md` — Constraints, funciones, procedimientos, triggers, vistas, roles, pruebas.
 - `docs/informes/informe_etapa3_carga_masiva.md` — Catálogos CSV, orden de carga FK, carga masiva Faker, triggers, consultas de control.
+- `docs/informes/informe_etapa4_indices.md` — Índices y rendimiento (pasos 1 a 8 con resultados reales EXPLAIN).
+- `docs/informes/informe_etapa5_explain.md` — Planes EXPLAIN para consultas S1 a S12.
 
 ## Próximos pasos sugeridos (cuando se decida continuar)
 
-1. Completar Etapa 4 pasos 3 a 8 (requiere ejecutar EXPLAIN contra base cargada)
-2. Etapa 5: Consultas SQL (INSERT, UPDATE, DELETE, SELECT)
-3. Etapa 6: API REST con FastAPI
-4. Etapa 7: Frontend con nginx
-5. Etapa 8: Despliegue en la nube
-6. Etapa 9: Documentación y defensa
+1. Etapa 6: API REST con FastAPI
+2. Etapa 7: Frontend con nginx
+3. Etapa 9: Documentación y defensa (etapa 8 de despliegue en la nube descartada)

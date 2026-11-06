@@ -161,17 +161,16 @@
 - 6 índices creados en `db/migrations/008_indices.sql`, cada uno con justificación
 - Commit `e62e644` pusheado a `origin/main` ✅
 
-**Pasos pendientes (5 a 8):**
-- Paso 5: Repetir mediciones de S1, S4 y S8 y armar tabla comparativa antes/después
+**Pasos pendientes (6 a 8):**
 - Paso 6: Justificar orden de columnas del índice compuesto y documentar un índice descartado
 - Paso 7: Medir costo de escritura (carga masiva con y sin índices)
 - Paso 8: Mostrar caso donde el planificador no use un índice existente y explicar por qué
 
 **Archivos creados:**
 - `db/migrations/008_indices.sql` (6 índices creados con justificación)
-- `docs/informes/informe_etapa4_indices.md` (pasos 1 y 2 completos con resultados reales)
+- `docs/informes/informe_etapa4_indices.md` (pasos 1 a 5 completos con resultados reales antes/después)
 
-**Commit y push:** `e62e644` — Push a `origin/main` ✅
+**Commit y push:** `96d31c1` — Push a `origin/main` ✅
 
 ---
 

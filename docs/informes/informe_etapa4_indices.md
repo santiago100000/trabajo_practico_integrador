@@ -275,24 +275,36 @@ ORDER BY monto_total_ventas DESC;
 
 ---
 
-## Resumen del Paso 2 (pendiente de completar con datos reales)
+## Resumen del Paso 5: Tabla comparativa antes/después de índices
 
-| Consulta | Tiempo (ms) sin índices | Recorrido dominante | Filas leídas |
-|----------|------------------------|---------------------|--------------|
-| S1 | 124.119 | Parallel Seq Scan (renglon_comprobante, comprobante) | 125,009 renglones, 50,000 comprobantes |
-| S4 | 0.094 | Seq Scan (renglon_transferencia, transferencia) | 0 filas (cod_vino=1 no tiene transferencias) |
-| S8 | 25.802 | Index Only Scan (comprobante via idx_comprobante_fecha_cubriendo) | 37,070 comprobantes, 11 salas |
+| Consulta | Tiempo ANTES (ms) | Tiempo DESPUÉS (ms) | Diferencia | Recorrido ANTES | Recorrido DESPUÉS |
+|----------|-------------------|---------------------|------------|-----------------|-------------------|
+| S1 | 124.119 | 203.871 | +79.752 | Parallel Seq Scan | Parallel Seq Scan (índice no aplica a GROUP BY total) |
+| S4 | 0.094 | 0.281 | +0.187 | Seq Scan | Seq Scan (0 filas, índice no se usa) |
+| S8 | 25.802 | 29.712 | +3.910 | Index Only Scan | Index Only Scan (usa índice preexistente) |
+
+### Análisis de resultados
+
+- **S1:** El índice `idx_renglon_comprobante_cod_vino` no se usa porque la consulta agrega **todos** los renglones (GROUP BY sin filtro WHERE). El índice ayuda a búsquedas por `cod_vino` específico, no a escaneo completo. El aumento de tiempo se debe a variación de carga del contenedor, no al índice.
+- **S4:** 0 filas encontradas (el vino 1 no tiene transferencias). El índice no se usa porque el planner estima muy pocas filas y prefiere Seq Scan.
+- **S8:** Ya usaba `idx_comprobante_fecha_cubriendo` (Índice Only Scan) antes de crear los nuevos índices. El nuevo índice compuesto `idx_comprobante_sala_fecha` no se usa porque el índice de cobertura existente es más eficiente para esta consulta específica.
+
+### Conclusión del Paso 5
+
+Los índices creados en los Pasos 3-4 son correctos para sus casos de uso específicos, pero las consultas S1, S4 y S8 seleccionadas en el Paso 1 no se benefician directamente de ellos porque:
+1. S1 necesita escanear toda la tabla (no hay filtro WHERE por cod_vino).
+2. S4 devuelve 0 filas y el planner prefiere Seq Scan.
+3. S8 ya tenía un índice de cobertura más eficiente.
+
+Los índices sí beneficiarían a consultas como: buscar renglones de un vino específico (`WHERE cod_vino = X`), buscar ventas de una sala en un rango de fecha, o consultas de rango por nro_comprobante.
 
 ---
 
-## Próximos pasos (Paso 3 a 8)
+## Próximos pasos (Paso 6 a 8)
 
-1. **Paso 3:** Diseñar índices a partir de los planes observados (buscar Seq Scan sobre tablas grandes, ordenamientos costosos, JOINs sin índice).
-2. **Paso 4:** Crear los índices en `db/migrations/008_indices.sql` y volver a ejecutar `ANALYZE`.
-3. **Paso 5:** Repetir las mediciones de S1, S4 y S8 y armar una tabla comparativa (antes / después).
-4. **Paso 6:** Justificar el orden de columnas del índice compuesto y documentar un índice descartado.
-5. **Paso 7:** Medir el costo de escritura (carga masiva con y sin índices).
-6. **Paso 8:** Mostrar un caso en que el planificador no use un índice existente y explicar por qué.
+- **Paso 6:** Justificar el orden de columnas del índice compuesto y documentar un índice descartado.
+- **Paso 7:** Medir el costo de escritura (carga masiva con y sin índices).
+- **Paso 8:** Mostrar un caso en que el planificador no use un índice existente y explicar por qué.
 
 ---
 

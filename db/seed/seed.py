@@ -18,6 +18,9 @@ from faker import Faker
 ROOT = Path(__file__).resolve().parent
 CATALOGOS = ROOT / "catalogos"
 
+# Prefijos válidos de CUIT argentino (persona jurídica)
+CUIT_PREFIXES = (20, 23, 24, 27, 30, 33, 34)
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -453,7 +456,7 @@ def cargar_bodegas(pool, rng, fake, n: int = 8) -> int:
     filas = []
     for _ in range(n):
         filas.append((
-            f"{rng.choice([20, 23, 24, 27, 30, 33, 34])}{rng.randint(10000000, 99999999)}{rng.randint(0, 9)}",
+            f"{rng.choice(CUIT_PREFIXES)}{rng.randint(10000000, 99999999)}{rng.randint(0, 9)}",
             fake.company(),
             fake.street_address(),
         ))
@@ -516,20 +519,20 @@ def cargar_vinos(pool, rng, fake, bodegas: list, n: int = 60) -> list:
                "Bonarda", "Syrah", "Merlot", "Tempranillo", "Pinot Noir", "Chenin Blanc"]
     usados = set()
     cod_vinos = []
-    for _ in range(n):
-        nombre = f"{rng.choice(nombres)} {rng.randint(2018, 2024)}"
-        anada = rng.randint(2018, 2024)
-        volumen = rng.choice(volumenes)
-        clave = (nombre, anada, volumen)
-        sufijo = 1
-        nombre_base = nombre
-        while clave in usados:
-            nombre = f"{nombre_base} Ed {sufijo}"
-            clave = (nombre, anada, volumen)
-            sufijo += 1
-        usados.add(clave)
-        with pool.connection() as conn:
-            with conn.cursor() as cur:
+    with pool.connection() as conn:
+        with conn.cursor() as cur:
+            for _ in range(n):
+                nombre = f"{rng.choice(nombres)} {rng.randint(2018, 2024)}"
+                anada = rng.randint(2018, 2024)
+                volumen = rng.choice(volumenes)
+                clave = (nombre, anada, volumen)
+                sufijo = 1
+                nombre_base = nombre
+                while clave in usados:
+                    nombre = f"{nombre_base} Ed {sufijo}"
+                    clave = (nombre, anada, volumen)
+                    sufijo += 1
+                usados.add(clave)
                 cur.execute(
                     "INSERT INTO vino (id_bodega, nombre, tipo, anada, volumen_ml, graduacion, precio) "
                     "VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING cod_vino;",
@@ -538,7 +541,7 @@ def cargar_vinos(pool, rng, fake, bodegas: list, n: int = 60) -> list:
                      round(rng.uniform(3000, 30000), 2)),
                 )
                 cod_vinos.append(cur.fetchone()[0])
-            conn.commit()
+        conn.commit()
     return cod_vinos
 
 
@@ -564,7 +567,7 @@ def cargar_empleados(pool, rng, fake, salas: list, n: int = 40) -> int:
     for _ in range(n):
         filas.append((
             rng.choice(salas),
-            f"{rng.choice([20, 23, 24, 27, 30, 33, 34])}{rng.randint(10000000, 99999999)}{rng.randint(0, 9)}",
+            f"{rng.choice(CUIT_PREFIXES)}{rng.randint(10000000, 99999999)}{rng.randint(0, 9)}",
             fake.first_name(), fake.last_name(),
             fake.date_between(start_date="-10y", end_date="today"),
             round(rng.uniform(200000, 800000), 2),
@@ -589,7 +592,7 @@ def cargar_transportistas(pool, rng, fake, localidades: list, n: int = 6) -> lis
                     "INSERT INTO transportista (razon_social, cuit, email, telefono, domicilio) "
                     "VALUES (%s, %s, %s, %s, %s) RETURNING cod_transportista;",
                     (fake.company(),
-                     f"{rng.choice([20, 23, 24, 27, 30, 33, 34])}{rng.randint(10000000, 99999999)}{rng.randint(0, 9)}",
+                     f"{rng.choice(CUIT_PREFIXES)}{rng.randint(10000000, 99999999)}{rng.randint(0, 9)}",
                      fake.email(), fake.phone_number(), fake.street_address()),
                 )
                 ids.append(cur.fetchone()[0])

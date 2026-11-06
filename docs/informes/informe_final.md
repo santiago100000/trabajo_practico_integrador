@@ -94,7 +94,7 @@ Todas las reglas de negocio están protegidas por mecanismos en la base de datos
 | `005_triggers.sql` | 8 triggers (BEFORE, AFTER, constraint diferido) | ✅ Aplicada |
 | `006_vistas.sql` | 3 vistas (1 materializada, 2 regulares) | ✅ Aplicada |
 | `007_roles.sql` | 3 roles (owner, app_rw, reporte_ro) | ✅ Aplicada |
-| `008_indices.sql` | Índices (pendiente de llenar con índices reales) | ⚠️ Stub |
+| `008_indices.sql` | 6 índices (compuesto, parcial, FK, expresión, INCLUDE, BRIN) | ✅ Aplicada |
 
 ### 5.2 Funciones implementadas
 

@@ -138,11 +138,14 @@
   - **S8:** Monto total de ventas por sala en el último trimestre (`comprobante`, `sala_venta`)
 - Documentado en `docs/informes/informe_etapa4_indices.md` y `db/migrations/008_indices.sql`
 
-### Paso 2: Medición inicial con EXPLAIN (ANALYZE, BUFFERS) — COMPLETADO ✅ (listo para ejecutar)
-- Comandos `ANALYZE` preparados para las 6 tablas involucradas
-- Comandos `EXPLAIN (ANALYZE, BUFFERS)` preparados para S1, S4 y S8
-- Secciones `[RESULTADO S1]`, `[RESULTADO S4]`, `[RESULTADO S8]` preparadas en el informe para registrar planes y tiempos reales
-- **Nota:** Los resultados reales deben obtenerse ejecutando los comandos contra la base cargada de la Etapa 3 y pegando la salida en el informe
+### Paso 2: Medición inicial con EXPLAIN (ANALYZE, BUFFERS) — COMPLETADO ✅ (datos reales)
+- Comandos `ANALYZE` ejecutados en las 6 tablas involucradas
+- Comandos `EXPLAIN (ANALYZE, BUFFERS)` ejecutados para S1, S4 y S8 contra la base cargada de la Etapa 3
+- Resultados reales registrados en `docs/informes/informe_etapa4_indices.md`:
+  - S1: 124.119 ms, Parallel Seq Scan sobre renglon_comprobante y comprobante
+  - S4: 0.094 ms, Seq Scan, 0 filas (cod_vino=1 sin transferencias)
+  - S8: 25.802 ms, Index Only Scan usando idx_comprobante_fecha_cubriendo
+- Tabla resumen antes/después completada con tiempos base
 
 **Pasos pendientes (3 a 8):**
 - Paso 3: Diseñar índices a partir de los planes observados

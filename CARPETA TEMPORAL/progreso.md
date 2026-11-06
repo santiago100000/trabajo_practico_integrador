@@ -192,6 +192,11 @@
 
 ---
 
+**Informes creados (etapas 1-3):**
+- `docs/informes/informe_etapa1_modelado.md` — Modelo, normalización, diccionario, decisiones de diseño.
+- `docs/informes/informe_etapa2_integridad.md` — Constraints, funciones, procedimientos, triggers, vistas, roles, pruebas.
+- `docs/informes/informe_etapa3_carga_masiva.md` — Catálogos CSV, orden de carga FK, carga masiva Faker, triggers, consultas de control.
+
 ## Próximos pasos sugeridos (cuando se decida continuar)
 
 1. Completar Etapa 4 pasos 3 a 8 (requiere ejecutar EXPLAIN contra base cargada)

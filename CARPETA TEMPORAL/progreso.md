@@ -178,7 +178,7 @@
 - `db/migrations/008_indices.sql` (6 índices creados con justificación)
 - `docs/informes/informe_etapa4_indices.md` (pasos 1 a 8 completos con resultados reales)
 
-**Commit y push:** pendiente (este commit) — a `origin/main`
+**Commit y push:** `66ff4f2` — Push a `origin/main` ✅
 
 ---
 

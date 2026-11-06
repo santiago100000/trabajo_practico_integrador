@@ -147,19 +147,31 @@
   - S8: 25.802 ms, Index Only Scan usando idx_comprobante_fecha_cubriendo
 - Tabla resumen antes/después completada con tiempos base
 
-**Pasos pendientes (3 a 8):**
-- Paso 3: Diseñar índices a partir de los planes observados
-- Paso 4: Crear índices en `008_indices.sql` y volver a ejecutar `ANALYZE`
-- Paso 5: Repetir mediciones y armar tabla comparativa antes/después
+### Paso 3: Diseño de índices — COMPLETADO ✅
+- Se diseñaron 6 índices basados en los planes de ejecución observados:
+  1. Compuesto (id_sala, fecha) en comprobante → S8
+  2. Parcial WHERE cantidad = 0 en stock_sala → stock agotado
+  3. Sobre FK cod_vino en renglon_comprobante → S1 (evita Parallel Seq Scan)
+  4. De expresión UPPER(nombre) en vino → búsqueda case-insensitive
+  5. BRIN en renglon_comprobante (nro_comprobante) → consultas de rango
+  6. Sobre FK cod_vino en renglon_transferencia → S4
+- Todos los requisitos mínimos cumplidos (≥5, compuesto, parcial, FK, expresión/BRIN)
+
+### Paso 4: Creación de índices en 008_indices.sql — COMPLETADO ✅
+- 6 índices creados en `db/migrations/008_indices.sql`, cada uno con justificación
+- Commit `e62e644` pusheado a `origin/main` ✅
+
+**Pasos pendientes (5 a 8):**
+- Paso 5: Repetir mediciones de S1, S4 y S8 y armar tabla comparativa antes/después
 - Paso 6: Justificar orden de columnas del índice compuesto y documentar un índice descartado
-- Paso 7: Medir costo de escritura con y sin índices
-- Paso 8: Mostrar caso donde el planificador no use un índice existente
+- Paso 7: Medir costo de escritura (carga masiva con y sin índices)
+- Paso 8: Mostrar caso donde el planificador no use un índice existente y explicar por qué
 
 **Archivos creados:**
-- `db/migrations/008_indices.sql` (pasos 1 y 2 documentados, placeholders para CREATE INDEX)
-- `docs/informes/informe_etapa4_indices.md` (pasos 1 y 2 completos)
+- `db/migrations/008_indices.sql` (6 índices creados con justificación)
+- `docs/informes/informe_etapa4_indices.md` (pasos 1 y 2 completos con resultados reales)
 
-**Commit y push:** `1c48984` — Push a `origin/main` ✅
+**Commit y push:** `e62e644` — Push a `origin/main` ✅
 
 ---
 

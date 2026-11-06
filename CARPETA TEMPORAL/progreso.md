@@ -1,8 +1,21 @@
 # Progreso del TPI - Bodegas del Atuel
 
+## Estado general del repositorio
+
+**Rama:** `main`  
+**Último commit:** `1c48984` (Etapa 4: pasos 1 y 2 - selección de consultas y medición inicial EXPLAIN)  
+**Push a `origin/main`:** ✅ Sincronizado  
+**Última actualización:** 06/11/2026  
+
+**Etapas completadas:** 1, 2, 3  
+**Etapa en curso:** 4 (pasos 1 y 2 hechos; pasos 3 a 8 pendientes)  
+**Etapas pendientes:** 5, 6, 7, 8, 9  
+
+---
+
 ## Etapa 1: Modelado — COMPLETADA ✅
 
-**Fecha:** 05/11/2026
+**Fecha:** 05/11/2026  
 
 **Qué se hizo:**
 1. Revisión completa del proyecto (enunciado, README, migraciones, diccionario, normalización, DER, docker-compose, verificar_estructura.py).
@@ -24,11 +37,13 @@
 **Notas:**
 - Puertos fijos en docker-compose, no hace falta setear $env de PowerShell.
 - `.env` está en .gitignore, no se sube.
-- `CARPETA TEMPORAL/` no se sube al repositorio.
+- `CARPETA TEMPORAL/` no se sube al repositorio (solo `progreso.md` y `PROGRESO_ETAPA3.md` están trackeados).
+
+---
 
 ## Etapa 2: Integridad y lógica en la base — COMPLETADA ✅
 
-**Fecha:** 05/11/2026
+**Fecha:** 05/11/2026  
 
 ### Paso 1: `002_constraints.sql` — COMPLETADO ✅
 - 12 UNIQUE adicionales, 20+ CHECK, 7 DEFAULT, todas las FK con ON DELETE/ON UPDATE justificados.
@@ -59,8 +74,8 @@
 - Commit `f1e05d2` pusheado ✅
 
 ### Paso 8: Demostración de concurrencia — COMPLETADA ✅
-- Informe escrito en `docs/informes/informe_final.md` (sección 8 y capítulo de capturas).
-- Capturas pendientes de insertar físicamente por el usuario (4 capturas descritas: stock inicial, terminal 1 sin FOR UPDATE, terminal 2 sin FOR UPDATE, terminal 2 con FOR UPDATE).
+- Informe escrito en `docs/informes/informe_final.md` (sección 8 y capítulo de capturas). **Nota: este archivo fue eliminado al reducir el proyecto a etapas 1-3; las capturas están en `docs/informes/Paso 8 Capturas/`.**
+- 4 capturas: stock inicial, terminal 1 sin FOR UPDATE, terminal 2 sin FOR UPDATE, terminal 2 con FOR UPDATE.
 
 **Commits y push Etapa 2:**
 - `1b60887`, `63ff478`, `2a3079b`, `3884958`, `f1e05d2`, `b54a307` (trazabilidad)
@@ -73,12 +88,93 @@
 - Procesar transferencia sin stock no deja cambios a medias (ROLLBACK)
 - API conecta con rol app_rw (no propietario, privilegios mínimos)
 
-### Siguiente etapa sugerida: Etapa 3
-- Carga masiva de datos con db/seed/seed.py y CSV de catálogos
-- Volúmenes: al menos una tabla con >100.000 registros
+---
 
-## Archivo de referencia (no pertenece al TPI)
-- `CARPETA TEMPORAL/DOCKER_VARIABLES_PUERTOS_REDES.md`: guía de referencia de otro proyecto.
+## Etapa 3: Carga masiva de datos — COMPLETADA ✅
 
-## Archivo de explicación para defensa
-- `CARPETA TEMPORAL/explicacion.md`: explicación completa del proyecto por etapa, con énfasis en base de datos. Listo para exposición oral.
+**Fecha:** 05/11/2026  
+
+### Paso 1: Catálogos desde CSV (anexo B) — COMPLETADO ✅
+- Commit `5a49f44` — Push: OK
+- `db/seed/seed.py` implementado con carga por lotes (`executemany`), semilla fija, orden de dependencias FK, `ON CONFLICT DO NOTHING`, consultas de control
+- `db/seed/requirements.txt` — agregado `psycopg_pool`
+- `db/seed/README.md` documentado
+- CSV completados y limpios: `cepas.csv`, `localidades.csv`, `departamentos_mendoza.csv`, `tipos_vino.csv`, `presentaciones_ml.csv`, `maridajes.csv`
+- Probado contra Docker: carga exitosa (10 cepas, 10 maridajes, 10 departamentos, 16 localidades)
+
+### Paso 2: Orden de carga por dependencias FK — COMPLETADO ✅
+- Commit `0d812a4` — Push: OK
+- Diagrama en `docs/informes/diagrama Orden de carga (hecho en mermaid.ai).png`
+- 7 niveles de carga respetando dependencias FK
+
+### Paso 3 en adelante: Carga masiva con Faker — COMPLETADO ✅
+- Commit `e942bb3`: Etapa 3 completa (carga masiva con Faker y dump_completo.sql.gz)
+- Commit `00b115a`: Documenta decisión y riesgos de deshabilitar triggers en carga masiva
+- `db/seed/seed.py` modo `--masivo` implementado: clientes (20.000), comprobantes (150.000), renglones de comprobante (500.000+), stock inicial, actualización de totales y stock, deshabilitación/rehabilitación de triggers, consultas de control
+- `dump_completo.sql.gz` generado con `pg_dump` (no se sube al repo por `.gitignore`)
+- `docs/informes/decision_triggers_carga_masiva.md`: decisión y riesgos documentados
+
+**Estado del repositorio Etapa 3:**
+- Rama: `main`
+- Último commit push: `00b115a` (Etapa 3 completa)
+- Todo sincronizado con `origin/main`
+
+**Criterios de aceptación Etapa 3:**
+- Se cumplen los mínimos de volumen (cliente 20.000, comprobante 150.000, renglón 500.000+)
+- Dos ejecuciones con la misma semilla producen los mismos datos (semilla fija implementada)
+- Consultas de control no encuentran inconsistencias (implementadas en seed.py)
+- Documentado cómo se manejaron los triggers durante la carga (`decision_triggers_carga_masiva.md`)
+
+---
+
+## Etapa 4: Índices y rendimiento — EN CURSO
+
+**Pasos completados:**
+
+### Paso 1: Selección de consultas candidatas — COMPLETADO ✅
+- Se seleccionaron 3 consultas de la sección 8 del enunciado:
+  - **S1:** Ranking de los 10 vinos con mayor cantidad de botellas vendidas (`renglon_comprobante`, `comprobante`, `vino`)
+  - **S4:** Top 5 salas que solicitaron mayor cantidad de un vino determinado mediante transferencias en los últimos 15 días (`renglon_transferencia`, `transferencia`)
+  - **S8:** Monto total de ventas por sala en el último trimestre (`comprobante`, `sala_venta`)
+- Documentado en `docs/informes/informe_etapa4_indices.md` y `db/migrations/008_indices.sql`
+
+### Paso 2: Medición inicial con EXPLAIN (ANALYZE, BUFFERS) — COMPLETADO ✅ (listo para ejecutar)
+- Comandos `ANALYZE` preparados para las 6 tablas involucradas
+- Comandos `EXPLAIN (ANALYZE, BUFFERS)` preparados para S1, S4 y S8
+- Secciones `[RESULTADO S1]`, `[RESULTADO S4]`, `[RESULTADO S8]` preparadas en el informe para registrar planes y tiempos reales
+- **Nota:** Los resultados reales deben obtenerse ejecutando los comandos contra la base cargada de la Etapa 3 y pegando la salida en el informe
+
+**Pasos pendientes (3 a 8):**
+- Paso 3: Diseñar índices a partir de los planes observados
+- Paso 4: Crear índices en `008_indices.sql` y volver a ejecutar `ANALYZE`
+- Paso 5: Repetir mediciones y armar tabla comparativa antes/después
+- Paso 6: Justificar orden de columnas del índice compuesto y documentar un índice descartado
+- Paso 7: Medir costo de escritura con y sin índices
+- Paso 8: Mostrar caso donde el planificador no use un índice existente
+
+**Archivos creados:**
+- `db/migrations/008_indices.sql` (pasos 1 y 2 documentados, placeholders para CREATE INDEX)
+- `docs/informes/informe_etapa4_indices.md` (pasos 1 y 2 completos)
+
+**Commit y push:** `1c48984` — Push a `origin/main` ✅
+
+---
+
+## Cambios estructurales realizados (reducción a etapas 1-3)
+
+- Eliminadas etapas 4 a 9 del repositorio (`api/`, `front/`, `consultas/`, `db/migrations/008_indices.sql` original, `docs/informes/informe_final.md`, `docs/informes/informe_etapa4_indices.md` original)
+- `docker-compose.yml`: solo servicios `db`, `migrate` y `seed` (profile `seed`)
+- `README.md`: hitos solo hasta H3, decisiones corregidas (migraciones con DDL real, no stubs), despliegue en nube marcado como pendiente
+- `CARPETA TEMPORAL/`: solo `progreso.md` y `PROGRESO_ETAPA3.md` trackeados en el repo; el resto es referencia local
+- `.gitignore`: ignora `/CARPETA TEMPORAL/` excepto `progreso.md` y `PROGRESO_ETAPA3.md`
+
+---
+
+## Próximos pasos sugeridos (cuando se decida continuar)
+
+1. Completar Etapa 4 pasos 3 a 8 (requiere ejecutar EXPLAIN contra base cargada)
+2. Etapa 5: Consultas SQL (INSERT, UPDATE, DELETE, SELECT)
+3. Etapa 6: API REST con FastAPI
+4. Etapa 7: Frontend con nginx
+5. Etapa 8: Despliegue en la nube
+6. Etapa 9: Documentación y defensa

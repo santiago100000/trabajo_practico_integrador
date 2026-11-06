@@ -161,15 +161,19 @@
 - 6 índices creados en `db/migrations/008_indices.sql`, cada uno con justificación
 - Commit `e62e644` pusheado a `origin/main` ✅
 
-**Pasos pendientes (7 a 8):**
-- Paso 7: Medir costo de escritura (carga masiva con y sin índices)
-- Paso 8: Mostrar caso donde el planificador no use un índice existente y explicar por qué
+**Etapa 4 COMPLETA ✅** (todos los pasos 1 a 8 finalizados)
+
+- Paso 7: Medir costo de escritura (carga masiva con y sin índices) — COMPLETADO ✅
+  - INSERT 10,000 filas: 176.119 ms con índices vs 157.706 ms sin índices (+12%)
+  - Creación de 6 índices: 324.316 ms total
+- Paso 8: Mostrar caso donde el planificador no use un índice existente y explicar por qué — COMPLETADO ✅
+  - Caso S1: consulta sin WHERE no usa índice en cod_vino (Parallel Seq Scan es más eficiente)
 
 **Archivos creados:**
 - `db/migrations/008_indices.sql` (6 índices creados con justificación)
-- `docs/informes/informe_etapa4_indices.md` (pasos 1 a 6 completos con resultados reales antes/después)
+- `docs/informes/informe_etapa4_indices.md` (pasos 1 a 8 completos con resultados reales)
 
-**Commit y push:** `1e1b1bb` — Push a `origin/main` ✅
+**Commit y push:** `a79eb53` — Push a `origin/main` ✅
 
 ---
 

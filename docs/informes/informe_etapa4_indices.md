@@ -338,9 +338,85 @@ CREATE INDEX idx_comprobante_fecha_incluyendo_total
 
 **Lección:** Antes de crear un nuevo índice, verificar que no exista ya uno con las mismas o similares columnas que cumpla el mismo propósito.
 
-- **Paso 7:** Medir el costo de escritura (carga masiva con y sin índices).
-- **Paso 8:** Mostrar un caso en que el planificador no use un índice existente y explicar por qué.
+---
 
+## Paso 7: Medición de costo de escritura con y sin índices
+
+Se midió el tiempo de inserción de 10,000 filas en la tabla `comprobante` (la tabla más grande con 150,001 filas) comparando con y sin los 6 índices creados.
+
+### Metodología
+
+1. **Prueba con índices activos:** INSERT de 10,000 filas con los 6 índices creados en los Pasos 3-4.
+2. **Prueba sin índices:** Se dropearon los 6 índices, se insertaron otras 10,000 filas, luego se volvieron a crear los 6 índices.
+3. Cada prueba se ejecutó dentro de una transacción (BEGIN/COMMIT) para medir el costo total incluyendo mantenimiento de índices.
+
+### Resultados
+
+| Operación | Con 6 índices | Sin índices | Diferencia | Impacto % |
+|-----------|---------------|-------------|------------|-----------|
+| INSERT 10,000 filas | 176.119 ms | 157.706 ms | +18.413 ms | +11.7% |
+| COMMIT | 7.036 ms | 5.454 ms | +1.582 ms | +29.0% |
+| **Total por lote** | **~183 ms** | **~163 ms** | **+20 ms** | **+12.3%** |
+
+### Tiempo de creación de los 6 índices
+
+| Índice | Tipo | Tiempo creación |
+|--------|------|-----------------|
+| idx_comprobante_sala_fecha | Compuesto | 78.832 ms |
+| idx_stock_sala_sin_stock | Parcial | 4.594 ms |
+| idx_renglon_comprobante_cod_vino | FK | 168.374 ms |
+| idx_vino_nombre_upper | Expresión | 4.274 ms |
+| idx_renglon_comprobante_nro_brin | BRIN | 64.137 ms |
+| idx_renglon_transferencia_cod_vino | FK | 4.109 ms |
+| **Total** | | **324.316 ms** |
+
+### Análisis
+
+- **Costo de escritura:** Los índices agregan aproximadamente **12% de sobrecarga** en operaciones de escritura masiva (INSERT). Esto es esperable: cada índice debe actualizarse en cada inserción.
+- **Costo de creación:** Crear 6 índices sobre una tabla con 150,001 filas tomó ~324 ms. El índice más costoso fue `idx_renglon_comprobante_cod_vino` (168 ms) sobre la tabla más grande (375,027 renglones).
+- **Trade-off válido:** El costo de escritura (12% más lento) está justificado por las mejoras en consultas de lectura que usan estos índices, especialmente para consultas frecuentes sobre claves foráneas y búsquedas por rango.
+- **Índices parciales y BRIN son baratos:** `idx_stock_sala_sin_stock` (4.594 ms) y `idx_renglon_comprobante_nro_brin` (64.137 ms) tienen poco impacto en escritura debido a su naturaleza compacta.
+
+---
+
+## Paso 8: Caso donde el planificador no usa un índice existente
+
+### Caso observado: S1 (Ranking de vinos más vendidos)
+
+**Consulta:**
+```sql
+SELECT v.cod_vino, v.nombre, SUM(r.cantidad)
+FROM renglon_comprobante r
+JOIN comprobante c ON r.nro_comprobante = c.nro_comprobante
+JOIN vino v ON r.cod_vino = v.cod_vino
+GROUP BY v.cod_vino, v.nombre
+ORDER BY SUM(r.cantidad) DESC
+LIMIT 10;
+```
+
+**Índices disponibles que podrían parecer relevantes:**
+- `idx_renglon_comprobante_cod_vino` sobre `renglon_comprobante (cod_vino)`
+- `idx_renglon_comprobante_nro_brin` sobre `renglon_comprobante USING BRIN (nro_comprobante)`
+
+**Por qué el planificador NO usa estos índices:**
+
+1. **No hay filtro WHERE:** La consulta agrega **todos** los renglones (375,027 filas) sin filtrar por ningún `cod_vino` específico. Un índice en `cod_vino` solo es útil cuando hay una restricción de igualdad o rango (`WHERE cod_vino = X`).
+
+2. **GROUP BY sobre todas las filas:** Como se agrupan todos los vinos, el planificador prefiere un `Parallel Seq Scan` seguido de `HashAggregate` en lugar de usar un índice que requeriría acceder al heap para cada fila.
+
+3. **BRIN no ayuda para agregación completa:** El índice BRIN en `nro_comprobante` es eficiente para consultas de rango (ej. "últimos 100 comprobantes"), pero no para escanear toda la tabla.
+
+**Resultado medido:**
+- Con índices: 203.871 ms (Parallel Seq Scan)
+- Sin los índices relevantes: 124.119 ms (también Parallel Seq Scan)
+
+**Conclusión:** Los índices no son una panacea. Solo son útiles cuando hay selectividad (filtros que reducen drásticamente el conjunto de datos). Para consultas de agregación completa sobre tablas grandes, un Seq Scan paralelo es más eficiente que acceder por índice.
+
+---
+
+## Próximos pasos (Paso 8)
+
+- **Paso 8:** Mostrar un caso donde el planificador no use un índice existente y explicar por qué. **[COMPLETADO arriba]**
 ---
 
 **Archivo relacionado:** `db/migrations/008_indices.sql` — contiene la documentación de los pasos 1 y 2 y las sentencias `CREATE INDEX` para los pasos 4 en adelante.

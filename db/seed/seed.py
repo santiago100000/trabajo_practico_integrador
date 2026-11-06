@@ -12,6 +12,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from psycopg_pool import ConnectionPool
+from psycopg import sql as sql
 from faker import Faker
 
 
@@ -399,31 +400,25 @@ def _fetch_col(pool, sql: str) -> list:
 # inserciones masivas y se vuelven a habilitar al terminar.
 # ---------------------------------------------------------------------------
 
-TRIGGERS_DESHABILITAR = [
-    "trg_coherencia_cliente_subtipo",
-    "trg_validar_stock_venta",
-    "trg_descontar_stock_y_calcular_totales",
-    "trg_bloquear_renglones_ingreso",
-    "trg_bloquear_renglones_transferencia",
-    "trg_fecha_confeccion_transferencia",
-    "trg_auditoria_precio_vino",
-]
-
 
 def deshabilitar_triggers(pool) -> None:
     """Deshabilita triggers de tablas clave para carga masiva histórica."""
+    tabla_por_trigger = {
+        "trg_coherencia_cliente_subtipo": "cliente",
+        "trg_validar_stock_venta": "renglon_comprobante",
+        "trg_descontar_stock_y_calcular_totales": "renglon_comprobante",
+        "trg_bloquear_renglones_ingreso": "renglon_ingreso",
+        "trg_bloquear_renglones_transferencia": "renglon_transferencia",
+        "trg_fecha_confeccion_transferencia": "transferencia",
+        "trg_auditoria_precio_vino": "vino",
+    }
     with pool.connection() as conn:
         with conn.cursor() as cur:
-            for t in TRIGGERS_DESHABILITAR:
+            for trigger, tabla in tabla_por_trigger.items():
                 cur.execute(
-                    "ALTER TABLE %s DISABLE TRIGGER %s;"
-                    % ({"trg_coherencia_cliente_subtipo": "cliente",
-                        "trg_validar_stock_venta": "renglon_comprobante",
-                        "trg_descontar_stock_y_calcular_totales": "renglon_comprobante",
-                        "trg_bloquear_renglones_ingreso": "renglon_ingreso",
-                        "trg_bloquear_renglones_transferencia": "renglon_transferencia",
-                        "trg_fecha_confeccion_transferencia": "transferencia",
-                        "trg_auditoria_precio_vino": "vino"}[t], t)
+                    sql.SQL("ALTER TABLE {} DISABLE TRIGGER {}").format(
+                        sql.Identifier(tabla), sql.Identifier(trigger)
+                    )
                 )
         conn.commit()
     print("  Triggers deshabilitados para carga masiva.")
@@ -431,18 +426,22 @@ def deshabilitar_triggers(pool) -> None:
 
 def habilitar_triggers(pool) -> None:
     """Vuelve a habilitar los triggers tras la carga masiva."""
+    tabla_por_trigger = {
+        "trg_coherencia_cliente_subtipo": "cliente",
+        "trg_validar_stock_venta": "renglon_comprobante",
+        "trg_descontar_stock_y_calcular_totales": "renglon_comprobante",
+        "trg_bloquear_renglones_ingreso": "renglon_ingreso",
+        "trg_bloquear_renglones_transferencia": "renglon_transferencia",
+        "trg_fecha_confeccion_transferencia": "transferencia",
+        "trg_auditoria_precio_vino": "vino",
+    }
     with pool.connection() as conn:
         with conn.cursor() as cur:
-            for t in TRIGGERS_DESHABILITAR:
+            for trigger, tabla in tabla_por_trigger.items():
                 cur.execute(
-                    "ALTER TABLE %s ENABLE TRIGGER %s;"
-                    % ({"trg_coherencia_cliente_subtipo": "cliente",
-                        "trg_validar_stock_venta": "renglon_comprobante",
-                        "trg_descontar_stock_y_calcular_totales": "renglon_comprobante",
-                        "trg_bloquear_renglones_ingreso": "renglon_ingreso",
-                        "trg_bloquear_renglones_transferencia": "renglon_transferencia",
-                        "trg_fecha_confeccion_transferencia": "transferencia",
-                        "trg_auditoria_precio_vino": "vino"}[t], t)
+                    sql.SQL("ALTER TABLE {} ENABLE TRIGGER {}").format(
+                        sql.Identifier(tabla), sql.Identifier(trigger)
+                    )
                 )
         conn.commit()
     print("  Triggers habilitados nuevamente.")

@@ -200,6 +200,14 @@ def contar_filas(pool, tabla: str) -> int:
             return cur.fetchone()[0]
 
 
+def leer_ids(pool, tabla: str, columna_id: str) -> list:
+    """Devuelve todos los IDs de una tabla."""
+    with pool.connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(f"SELECT {columna_id} FROM {tabla};")
+            return [r[0] for r in cur.fetchall()]
+
+
 def main() -> None:
     args = parse_args()
     rng = random.Random(args.seed)
@@ -243,110 +251,103 @@ def main() -> None:
         ejecutar_masivo(args, rng, fake)
 
 
+def cargar_datos_maestros(pool, rng, fake) -> dict:
+    """Carga datos maestros (volumen bajo) si las tablas están vacías.
+    Devuelve dict con listas de IDs necesarias para la carga masiva.
+    """
+    datos = {}
+
+    # Bodegas
+    if contar_filas(pool, "bodega") == 0:
+        cargar_bodegas(pool, rng, fake, n=8)
+    datos["bodegas"] = leer_ids(pool, "bodega", "id_bodega")
+
+    # Departamentos
+    datos["departamentos"] = leer_ids(pool, "departamento", "id_departamento")
+
+    # Fincas
+    if contar_filas(pool, "finca") == 0:
+        cargar_fincas(pool, rng, fake, datos["departamentos"], n=12)
+    datos["fincas"] = leer_ids(pool, "finca", "id_finca")
+
+    # Cepas (leer de DB para parcelas)
+    datos["cepas"] = leer_ids(pool, "cepa", "id_cepa")
+
+    # Parcelas
+    if contar_filas(pool, "parcela") == 0:
+        cargar_parcelas(pool, rng, fake, datos["fincas"], datos["cepas"], n_por_finca=4)
+
+    # Vinos
+    if contar_filas(pool, "vino") == 0:
+        cargar_vinos(pool, rng, fake, datos["bodegas"], n=60)
+    datos["vinos"] = leer_ids(pool, "vino", "cod_vino")
+
+    # Salas y localidades
+    datos["localidades"] = leer_ids(pool, "localidad", "id_localidad")
+    if contar_filas(pool, "sala_venta") == 0:
+        datos["salas"] = cargar_salas(pool, rng, fake, datos["localidades"], n=10)
+    else:
+        datos["salas"] = leer_ids(pool, "sala_venta", "id_sala")
+
+    # Empleados
+    if contar_filas(pool, "empleado") == 0:
+        cargar_empleados(pool, rng, fake, datos["salas"], n=40)
+
+    # Transportistas
+    if contar_filas(pool, "transportista") == 0:
+        cargar_transportistas(pool, rng, fake, datos["localidades"], n=6)
+
+    return datos
+
+
+def _mostrar_estadisticas_finales(pool) -> None:
+    """Imprime conteo final por tabla y total de filas masivas."""
+    print("\n" + "=" * 60)
+    print("CONSULTAS DE CONTROL - conteo final por tabla")
+    print("=" * 60)
+    tablas_final = [
+        "provincia", "departamento", "localidad", "bodega", "finca", "cepa",
+        "parcela", "vino", "sala_venta", "empleado", "transportista",
+        "cliente", "socio", "distribuidor", "exportador",
+        "stock_deposito", "stock_sala", "comprobante", "renglon_comprobante",
+    ]
+    total_masivo = 0
+    for tabla in tablas_final:
+        n = contar_filas(pool, tabla)
+        print(f"  {tabla:<28} {n:>8} filas")
+        if tabla in ("cliente", "comprobante", "renglon_comprobante"):
+            total_masivo += n
+    print(f"\n  Filas en tablas masivas (cliente+comprobante+renglon_comprobante): {total_masivo}")
+
+
 def ejecutar_masivo(args, rng, fake) -> None:
     """Orquesta la carga masiva: maestros, clientes, stock, comprobantes/renglones,
     actualización de totales, reactivación de triggers y consultas de control."""
     with pool_owner() as pool:
         # 0. Datos maestros (volumen bajo)
         print("\n--- Datos maestros ---")
-        with medir_tiempo("bodegas"):
-            bodegas = [1]  # placeholder si ya existen
-            # Leer bodegas existentes o cargar pocas
-            nb = contar_filas(pool, "bodega")
-            if nb == 0:
-                nb = cargar_bodegas(pool, rng, fake, n=8)
-            cur_bodegas = None
-            with pool.connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT id_bodega FROM bodega;")
-                    bodegas = [r[0] for r in cur.fetchall()]
-            print(f"  Bodegas: {len(bodegas)}")
-
-        with medir_tiempo("departamentos"):
-            nd = contar_filas(pool, "departamento")
-            id_deps = []
-            with pool.connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT id_departamento FROM departamento;")
-                    id_deps = [r[0] for r in cur.fetchall()]
-            print(f"  Departamentos: {len(id_deps)}")
-
-        with medir_tiempo("fincas"):
-            nf = contar_filas(pool, "finca")
-            if nf == 0:
-                nf = cargar_fincas(pool, rng, fake, id_deps, n=12)
-            with pool.connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT id_finca FROM finca;")
-                    fincas = [r[0] for r in cur.fetchall()]
-            print(f"  Fincas: {len(fincas)}")
-
-        with medir_tiempo("parcelas"):
-            np_ = contar_filas(pool, "parcela")
-            if np_ == 0:
-                with pool.connection() as conn:
-                    with conn.cursor() as cur:
-                        cur.execute("SELECT id_cepa FROM cepa;")
-                        cepas = [r[0] for r in cur.fetchall()]
-                np_ = cargar_parcelas(pool, rng, fake, fincas, cepas, n_por_finca=4)
-            print(f"  Parcelas: {np_}")
-
-        with medir_tiempo("vinos"):
-            nv = contar_filas(pool, "vino")
-            if nv == 0:
-                nv = len(cargar_vinos(pool, rng, fake, bodegas, n=60))
-            with pool.connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT cod_vino FROM vino;")
-                    vinos = [r[0] for r in cur.fetchall()]
-            print(f"  Vinos: {len(vinos)}")
-
-        with medir_tiempo("salas"):
-            ns = contar_filas(pool, "sala_venta")
-            with pool.connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT id_localidad FROM localidad;")
-                    localidades = [r[0] for r in cur.fetchall()]
-                    cur.execute("SELECT id_sala FROM sala_venta;")
-                    salas = [r[0] for r in cur.fetchall()]
-            if ns == 0:
-                salas = cargar_salas(pool, rng, fake, localidades, n=10)
-            print(f"  Salas: {len(salas)}")
-
-        with medir_tiempo("empleados"):
-            ne = contar_filas(pool, "empleado")
-            if ne == 0:
-                ne = cargar_empleados(pool, rng, fake, salas, n=40)
-            print(f"  Empleados: {ne}")
-
-        with medir_tiempo("transportistas"):
-            nt = contar_filas(pool, "transportista")
-            with pool.connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT cod_transportista FROM transportista;")
-                    transportistas = [r[0] for r in cur.fetchall()]
-            if nt == 0:
-                transportistas = cargar_transportistas(pool, rng, fake, localidades, n=6)
-            print(f"  Transportistas: {len(transportistas)}")
+        datos = cargar_datos_maestros(pool, rng, fake)
+        for grupo, ids in datos.items():
+            print(f"  {grupo}: {len(ids)}")
 
         # 1. Clientes masivos (20.000) + subtipos
         print("\n--- Clientes masivos ---")
         deshabilitar_triggers(pool)
         with medir_tiempo("clientes"):
-            nc = cargar_clientes_masivo(pool, rng, fake, localidades, n=args.clientes)
+            nc = cargar_clientes_masivo(pool, rng, fake, datos["localidades"], n=args.clientes)
         print(f"  Clientes insertados: {nc}")
 
         # 2. Stock inicial
         print("\n--- Stock inicial ---")
-        cargar_stock_inicial(pool, rng, vinos, salas)
+        cargar_stock_inicial(pool, rng, datos["vinos"], datos["salas"])
 
-        # 3. Comprobantes y renglones masivos (150.000 / 500.000+)
+        # 3. Comprobantes y renglones masivos
         print("\n--- Comprobantes y renglones masivos ---")
         with medir_tiempo("comprobantes_renglones"):
             ncomp, nreng = cargar_comprobantes_renglones_masivo(
                 pool, rng, fake,
                 clientes=_fetch_col(pool, "SELECT id_cliente FROM cliente;"),
-                salas=salas, vinos=vinos,
+                salas=datos["salas"], vinos=datos["vinos"],
                 n_comprobantes=args.comprobantes,
             )
         print(f"  Comprobantes: {ncomp}, Renglones: {nreng}")
@@ -360,22 +361,7 @@ def ejecutar_masivo(args, rng, fake) -> None:
         habilitar_triggers(pool)
 
         # 6. Consultas de control finales
-        print("\n" + "=" * 60)
-        print("CONSULTAS DE CONTROL - conteo final por tabla")
-        print("=" * 60)
-        tablas_final = [
-            "provincia", "departamento", "localidad", "bodega", "finca", "cepa",
-            "parcela", "vino", "sala_venta", "empleado", "transportista",
-            "cliente", "socio", "distribuidor", "exportador",
-            "stock_deposito", "stock_sala", "comprobante", "renglon_comprobante",
-        ]
-        total_masivo = 0
-        for tabla in tablas_final:
-            n = contar_filas(pool, tabla)
-            print(f"  {tabla:<28} {n:>8} filas")
-            if tabla in ("cliente", "comprobante", "renglon_comprobante"):
-                total_masivo += n
-        print(f"\n  Filas en tablas masivas (cliente+comprobante+renglon_comprobante): {total_masivo}")
+        _mostrar_estadisticas_finales(pool)
 
         # 7. Volcado de la base cargada
         print("\n--- Generando dump_completo.sql.gz ---")
@@ -603,23 +589,52 @@ def cargar_transportistas(pool, rng, fake, localidades: list, n: int = 6) -> lis
 # Carga masiva (triggers DESHABILITADOS durante la carga)
 # ---------------------------------------------------------------------------
 
+def _insertar_subtipos(cur, ids_tipos: list, rng, fake) -> None:
+    """Inserta filas de subtipo (socio/distribuidor/exportador) para los clientes dados."""
+    paises = ["Chile", "Brasil", "Uruguay", "EE.UU.", "España", "Italia"]
+    zonas = ["Norte", "Sur", "Este", "Oeste", "Centro"]
+    filas_socio = []
+    filas_dist = []
+    filas_exp = []
+    for id_cliente, tipo in ids_tipos:
+        if tipo == "socio":
+            filas_socio.append((id_cliente,))
+        elif tipo == "distribuidor":
+            filas_dist.append((id_cliente, rng.choice(zonas),
+                                f"HAB-{rng.randint(1000,9999)}"))
+        else:
+            filas_exp.append((id_cliente, rng.choice(paises)))
+    if filas_socio:
+        cur.executemany(
+            "INSERT INTO socio (id_cliente) VALUES (%s) ON CONFLICT DO NOTHING;",
+            filas_socio,
+        )
+    if filas_dist:
+        cur.executemany(
+            "INSERT INTO distribuidor (id_cliente, zona_cobertura, nro_habilitacion) "
+            "VALUES (%s,%s,%s) ON CONFLICT DO NOTHING;",
+            filas_dist,
+        )
+    if filas_exp:
+        cur.executemany(
+            "INSERT INTO exportador (id_cliente, pais_destino) VALUES (%s,%s) "
+            "ON CONFLICT DO NOTHING;",
+            filas_exp,
+        )
+
+
 def cargar_clientes_masivo(pool, rng, fake, localidades: list, n: int = 20000,
                            lote: int = 5000) -> int:
     """Inserta clientes y sus filas de subtipo (socio/distribuidor/exportador)."""
     tipos = ["socio", "distribuidor", "exportador"]
     tipos_doc = ["DNI", "CUIT", "CUIL", "PASAPORTE"]
     descuentos = {"socio": 10, "distribuidor": 20, "exportador": 30}
-    paises = ["Chile", "Brasil", "Uruguay", "EE.UU.", "España", "Italia"]
-    zonas = ["Norte", "Sur", "Este", "Oeste", "Centro"]
     total = 0
     with pool.connection() as conn:
         with conn.cursor() as cur:
             for ini in range(0, n, lote):
                 fin = min(ini + lote, n)
                 filas_cliente = []
-                filas_socio = []
-                filas_dist = []
-                filas_exp = []
                 for _ in range(ini, fin):
                     tipo = rng.choice(tipos)
                     nombre = fake.name()
@@ -644,31 +659,7 @@ def cargar_clientes_masivo(pool, rng, fake, localidades: list, n: int = 20000,
                     (max_antes, fin - ini),
                 )
                 ids_tipos = cur.fetchall()
-                for id_cliente, tipo in ids_tipos:
-                    if tipo == "socio":
-                        filas_socio.append((id_cliente,))
-                    elif tipo == "distribuidor":
-                        filas_dist.append((id_cliente, rng.choice(zonas),
-                                            f"HAB-{rng.randint(1000,9999)}"))
-                    else:
-                        filas_exp.append((id_cliente, rng.choice(paises)))
-                if filas_socio:
-                    cur.executemany(
-                        "INSERT INTO socio (id_cliente) VALUES (%s) ON CONFLICT DO NOTHING;",
-                        filas_socio,
-                    )
-                if filas_dist:
-                    cur.executemany(
-                        "INSERT INTO distribuidor (id_cliente, zona_cobertura, nro_habilitacion) "
-                        "VALUES (%s,%s,%s) ON CONFLICT DO NOTHING;",
-                        filas_dist,
-                    )
-                if filas_exp:
-                    cur.executemany(
-                        "INSERT INTO exportador (id_cliente, pais_destino) VALUES (%s,%s) "
-                        "ON CONFLICT DO NOTHING;",
-                        filas_exp,
-                    )
+                _insertar_subtipos(cur, ids_tipos, rng, fake)
                 conn.commit()
                 total += (fin - ini)
                 print(f"    clientes {ini}-{fin} de {n}")

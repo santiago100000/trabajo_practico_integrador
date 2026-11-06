@@ -300,9 +300,44 @@ Los índices sí beneficiarían a consultas como: buscar renglones de un vino es
 
 ---
 
-## Próximos pasos (Paso 6 a 8)
+## Paso 6: Justificación del orden de columnas y índice descartado
 
-- **Paso 6:** Justificar el orden de columnas del índice compuesto y documentar un índice descartado.
+### Justificación del orden de columnas en `idx_comprobante_sala_fecha (id_sala, fecha)`
+
+El índice compuesto fue creado con el orden `(id_sala, fecha)` por las siguientes razones:
+
+1. **Selectividad y cardinalidad:** `id_sala` tiene baja cardinalidad (solo 11 salas en el dataset), mientras que `fecha` tiene alta cardinalidad (150,001 comprobantes con fechas distintas). En un índice compuesto, la columna de mayor selectividad (más valores distintos) debería ir primero para filtrar más filas lo antes posible. Sin embargo, en este caso el orden `(id_sala, fecha)` se eligió deliberadamente porque:
+
+2. **Patrón de consulta S8:** La consulta filtra por rango de fecha (`WHERE fecha >= ...`) y agrupa por sala (`GROUP BY id_sala`). Con el orden `(id_sala, fecha)`, el índice permite:
+   - Escanear todas las entradas de una sala específica de forma contigua
+   - Dentro de cada sala, las fechas están ordenadas, lo que permite un rango eficiente sobre `fecha`
+   - Evitar un ordenamiento adicional para el `GROUP BY id_sala` (las filas ya vienen agrupadas por sala)
+
+3. **Cobertura del índice:** El índice `idx_comprobante_sala_fecha` cubre las columnas `id_sala` y `fecha` que son las usadas en el filtro y agrupación de S8. Aunque no incluye `total` (que requeriría un `INCLUDE`), el índice permite reducir drásticamente las lecturas de heap al filtrar primero por sala y fecha.
+
+4. **Por qué no `(fecha, id_sala)`:** Si se usara `(fecha, id_sala)`, el índice sería eficiente para filtrar por rango de fecha, pero las filas dentro de cada fecha no estarían agrupadas por sala, forzando un sort o hash adicional para el `GROUP BY id_sala`. Además, si se consulta por sala sin filtro de fecha, el índice `(fecha, id_sala)` no podría usarse eficientemente (la primera columna no tendría restricción).
+
+En resumen: `(id_sala, fecha)` está optimizado para consultas que filtran por sala y/o rango de fecha, y agrupan por sala.
+
+### Índice descartado: `idx_comprobante_fecha_incluyendo_total`
+
+Se evaluó crear un índice de cobertura con `INCLUDE` para S8:
+
+```sql
+CREATE INDEX idx_comprobante_fecha_incluyendo_total
+    ON comprobante (fecha) INCLUDE (id_sala, total);
+```
+
+**Por qué se descartó:**
+
+1. **Ya existía un índice similar más eficiente:** El índice `idx_comprobante_fecha_cubriendo` (creado previamente, posiblemente en otra migración) ya tiene la misma estructura `(fecha) INCLUDE (id_sala, total)`. Crear un segundo índice con las mismas columnas sería redundante y solo agregaría costo de escritura sin beneficio de lectura.
+
+2. **Costo de escritura:** Cada índice adicional ralentiza `INSERT`, `UPDATE` y `DELETE` en `comprobante` (la tabla más grande con 150,001 filas). Mantener dos índices con la misma columna principal (`fecha`) duplica el trabajo de mantenimiento sin mejorar los planes de ejecución.
+
+3. **El planner ya usa el existente:** Como se vio en el Paso 5, S8 ya utiliza `idx_comprobante_fecha_cubriendo` con Index Only Scan. Un segundo índice similar no cambiaría el plan de ejecución.
+
+**Lección:** Antes de crear un nuevo índice, verificar que no exista ya uno con las mismas o similares columnas que cumpla el mismo propósito.
+
 - **Paso 7:** Medir el costo de escritura (carga masiva con y sin índices).
 - **Paso 8:** Mostrar un caso en que el planificador no use un índice existente y explicar por qué.
 

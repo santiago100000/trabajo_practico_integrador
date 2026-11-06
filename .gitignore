@@ -228,4 +228,3 @@ dump_completo*
 # Solo se mantienen trackeados los archivos de progreso.
 /CARPETA TEMPORAL/
 !/CARPETA TEMPORAL/progreso.md
-!/CARPETA TEMPORAL/PROGRESO_ETAPA3.md

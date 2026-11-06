@@ -1,0 +1,40 @@
+====================================================================
+REGLAS DEL PROYECTO: BODEGAS DEL ATUEL (UTN FRSR)
+====================================================================
+
+Este documento resume las reglas estrictas que debe cumplir el Trabajo Práctico Integrador de Bases de Datos. Se dividen en Reglas de Negocio (lógica de la empresa) y Restricciones Tecnológicas.
+
+IMPORTANTE: la carpeta ubicada en C:\Users\Fede\Desktop\PROYECTO BDD\TPI_Bodegas_del_Atuel\trabajo_practico_integrador\CARPETA TEMPORAAL se sube al repositorio para que los demas integrantes tengan el contexto
+
+--------------------------------------------------------------------
+PARTE 1: REGLAS DE NEGOCIO (Deben implementarse en la Base de Datos)
+--------------------------------------------------------------------
+Cada una de estas reglas debe estar protegida por un mecanismo en la base de datos (CHECK, UNIQUE, Triggers, Funciones, Procedimientos, etc.). La API o el Frontend NO deben ser los responsables de garantizar estas reglas.
+
+RN-01: El precio de un vino es único para toda la red de salas y siempre mayor que cero.
+RN-02: Una sala pertenece a una sola localidad. Cada localidad tiene un único encargado regional.
+RN-03: Cada empleado trabaja en una sola sala.
+RN-04: Una parcela tiene una sola cepa y se cosecha como máximo una vez por campaña.
+RN-05: Los porcentajes de corte de un vino (composición de cepas) suman exactamente 100.
+RN-06: El descuento depende del tipo de cliente: socio 10%, distribuidor 20%, exportador 30%.
+RN-07: Un exportador puede tener varios permisos de exportación; la fecha de vencimiento debe ser posterior a la de emisión.
+RN-08: El total del comprobante es la suma de sus renglones con el descuento aplicado. No se carga a mano.
+RN-09: No se puede vender más de lo que hay en stock de la sala. El stock nunca es negativo.
+RN-10: Solo un ingreso terminado impacta en el stock del depósito y pasa a procesado. Las transiciones son: en_confeccion -> terminado -> procesado, y no pueden retroceder.
+RN-11: Igual que RN-10 para transferencias. Al procesar, descuenta del depósito y suma a la sala. No puede procesarse sin stock suficiente en depósito. La fecha de confección es la actual y no se puede modificar.
+RN-12: Un ingreso o transferencia que no está en estado "en_confeccion" no admite agregar, modificar ni quitar renglones.
+RN-13: Todo cambio de precio de un vino queda auditado (fecha, usuario, precio anterior y precio nuevo).
+RN-14: No se puede borrar un transportista, una bodega ni un vino que tengan movimientos asociados.
+RN-15: Cantidades, superficies, kilos y precios son siempre positivos (>0). La graduación alcohólica está entre 5 y 20.
+
+--------------------------------------------------------------------
+PARTE 2: REGLAS Y RESTRICCIONES TECNOLÓGICAS
+--------------------------------------------------------------------
+1. Motor de Base de Datos: PostgreSQL (versión 14 o superior).
+2. Acceso a Datos (Regla de Oro): SQL directo con driver nativo (psycopg, pg, JDBC, etc.). ESTÁ ESTRICTAMENTE PROHIBIDO EL USO DE ORM (Object-Relational Mapping) o query builders que oculten el SQL.
+3. Responsabilidad de Cálculos: La API y el Frontend NO recalculan totales, descuentos ni stock. Deben llamar a las funciones/procedimientos de la base de datos y dejar que los triggers protejan la información.
+4. Infraestructura Local: Se debe usar Docker y Docker Compose. Un solo comando (`docker compose up`) debe levantar la base de datos, la API y el Frontend.
+5. Control de Versiones: Repositorio en GitHub o GitLab. Es obligatorio que existan commits de todos los integrantes del grupo. No se deben subir secretos (contraseñas, cadenas de conexión) al repositorio.
+6. API REST: Debe retornar JSON, traducir los errores SQL a códigos HTTP claros (ej. 409 Conflict si no hay stock) y no conectarse a la BD con el rol de superusuario/propietario, sino con un rol de privilegios mínimos (lectura/escritura). Las consultas SQL deben estar parametrizadas para evitar Inyección SQL.
+7. Carga de Datos: Debe realizarse mediante un script en Python (Faker, random) con una semilla fija para garantizar la reproducibilidad. Se requieren volúmenes grandes (al menos una tabla con más de 100.000 registros).
+8. IMPORTANTE La etapa 8 (despliegue en al nube) no se va a hacerm ya que no se considera imporante, solo que funcione localmente

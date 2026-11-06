@@ -224,7 +224,11 @@ __marimo__/
 *.sql.gz
 dump_completo*
 
-# CARPETA TEMPORAL es solo referencia local del agente, no se sube al repo.
-# Solo se mantienen trackeados los archivos de progreso.
+# CARPETA TEMPORAL es referencia local del agente.
+# Se mantienen trackeados los archivos de progreso y los documentos clave del proyecto.
 /CARPETA TEMPORAL/
 !/CARPETA TEMPORAL/progreso.md
+!/CARPETA TEMPORAL/DOCKER_VARIABLES_PUERTOS_REDES.md
+!/CARPETA TEMPORAL/explicacion.md
+!/CARPETA TEMPORAL/reglas_del_proyecto_bodegas_del_atuel.txt
+!/CARPETA TEMPORAL/TPI_Bodegas_del_Atuel.md

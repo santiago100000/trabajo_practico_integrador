@@ -223,3 +223,9 @@ __marimo__/
 .env
 *.sql.gz
 dump_completo*
+
+# CARPETA TEMPORAL es solo referencia local del agente, no se sube al repo.
+# Solo se mantienen trackeados los archivos de progreso.
+/CARPETA TEMPORAL/
+!/CARPETA TEMPORAL/progreso.md
+!/CARPETA TEMPORAL/PROGRESO_ETAPA3.md

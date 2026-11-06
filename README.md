@@ -28,8 +28,7 @@ docker compose up --build
 Servicios:
 - `db`: PostgreSQL 16 en `127.0.0.1:${DB_PORT}` (default 5432)
 - `migrate`: aplica migraciones de `db/migrations/` en orden y termina
-- `api`: FastAPI en `http://localhost:${API_PORT}` (default 8000), docs en `/docs`
-- `front`: nginx en `http://localhost:${FRONT_PORT}` (default 8080)
+- `seed` (profile `seed`): carga masiva de datos con `db/seed/seed.py` y catálogos CSV
 
 ## Cómo correr el seed (opcional)
 
@@ -43,37 +42,23 @@ docker compose --profile seed run --rm seed
 docker compose exec db psql -U bodegas_owner -d bodegas -f /tests/db_tests.sql
 ```
 
-## Cómo correr los tests de la API
-
-```bash
-docker compose exec api pytest -q
-```
-
 ## URLs locales
 
-- API: http://localhost:8000
-- Documentación API (Swagger): http://localhost:8000/docs
-- Front: http://localhost:8080
+- Base de datos: http://localhost:${DB_PORT} (default 5433)
 
-## Tabla de hitos
+## Tabla de hitos (hasta Etapa 3)
 
-- [ ] H1: Scaffolding inicial (este repositorio)
-- [ ] H2: Esquema y restricciones (001, 002)
-- [ ] H3: Funciones (003)
-- [ ] H4: Procedimientos transaccionales (004)
-- [ ] H5: Triggers (005)
-- [ ] H6: Vistas (006)
-- [ ] H7: Roles y privilegios (007)
-- [ ] H8: Índices (008)
-- [ ] H9: API, front, seed, consultas y pruebas completas
+- [x] H1: Scaffolding inicial (este repositorio)
+- [x] H2: Esquema, restricciones, funciones, procedimientos, triggers, vistas y roles (001 a 007)
+- [x] H3: Carga masiva de datos (db/seed/ con catálogos CSV y seed.py con Faker)
 
 ## Decisiones
 
-- **Ambiguedad resuelta por simplicidad:** todas las columnas de auditoría usan `timestamptz` con `DEFAULT now()`.
-- Los `.sql` de migración son stubs con solo comentarios; el grupo escribe el DDL real a mano.
-- La API y el front no calculan totales, descuentos ni stock: eso vive en la base de datos (funciones, triggers y vistas).
+- **DDL real en migraciones:** todos los archivos `db/migrations/001_esquema.sql` a `007_roles.sql` contienen DDL completo y aplicable (no son stubs).
+- **Todas las columnas de auditoría** usan `timestamp` con `DEFAULT CURRENT_TIMESTAMP` (trigger `trg_auditoria_precio_vino`).
+- **Regla de oro:** la base de datos es el corazón del sistema. Toda la lógica de negocio (RN-01 a RN-15) vive dentro de PostgreSQL mediante constraints, funciones, procedimientos y triggers.
 - Puerto de Postgres publicado solo en `127.0.0.1` para no exponerlo fuera de localhost.
 
 ## Despliegue en la nube
 
-TODO
+Pendiente (Etapa 8).

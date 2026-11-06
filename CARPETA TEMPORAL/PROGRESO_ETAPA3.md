@@ -26,14 +26,15 @@
 - Diagrama en `docs/informes/diagrama Orden de carga (hecho en mermaid.ai).png`
 - 7 niveles de carga respetando dependencias FK
 
-### Paso 3 en adelante — Pendiente
-- Carga masiva con Faker (clientes, vinos, comprobantes, etc.)
-- Volúmenes: cliente 20.000, comprobante 150.000, renglón 500.000+
-- Manejo de triggers durante carga (DISABLE/ENABLE TRIGGER)
-- Consultas de control y volcado `pg_dump`
+### Paso 3 en adelante — COMPLETO ✅
+- Carga masiva con Faker (clientes, vinos, comprobantes, etc.) implementada en `db/seed/seed.py` (modo `--masivo`).
+- Volúmenes: cliente 20.000, comprobante 150.000, renglón 500.000+ (por defecto).
+- Manejo de triggers durante carga (DISABLE/ENABLE TRIGGER): 7 triggers deshabilitados y rehabilitados al final.
+- Consultas de control y volcado `pg_dump` (`dump_completo.sql.gz`).
+- Commit `e942bb3`: Etapa 3 completa (carga masiva con Faker y dump_completo.sql.gz).
+- Commit `00b115a`: Documenta decisión y riesgos de deshabilitar triggers en carga masiva.
 
 ## Estado del repositorio
 - Rama: `main`
-- Último commit push: `0d812a4` (Etapa 3 Paso 2)
-- Commit anterior push: `5a49f44` (Etapa 3 Paso 1)
+- Último commit push: `00b115a` (Etapa 3 completa)
 - Todo sincronizado con `origin/main`

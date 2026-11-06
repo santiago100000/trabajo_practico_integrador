@@ -38,31 +38,6 @@ services:
       OWNER_PASSWORD: ${OWNER_DB_PASSWORD}
     entrypoint: ["/migrate_entrypoint.sh"]
 
-  api:
-    build: ./api
-    container_name: bodegas_api
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-    environment:
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: ${POSTGRES_DB}
-      DB_USER: ${APP_DB_USER}
-      DB_PASSWORD: ${APP_DB_PASSWORD}
-      API_PORT: 8001
-      CORS_ORIGINS: ${CORS_ORIGINS}
-    ports:
-      - "127.0.0.1:8001:8000"
-
-  front:
-    image: nginx:alpine
-    container_name: bodegas_front
-    volumes:
-      - ./front:/usr/share/nginx/html:ro
-    ports:
-      - "8081:80"
-
   seed:
     build: ./db/seed
     container_name: bodegas_seed

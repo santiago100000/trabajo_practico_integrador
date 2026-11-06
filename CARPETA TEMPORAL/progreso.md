@@ -163,6 +163,11 @@
 
 **Etapa 4 COMPLETA ✅** (todos los pasos 1 a 8 finalizados)
 
+- Paso 5: Tabla comparativa antes/después con C1, C2, C3 — COMPLETADO ✅
+  - C1: 13.716 ms (Parallel Seq Scan) → 0.813 ms (Index Only Scan), -94.1%
+  - C2: 0.085 ms (Seq Scan) → 0.113 ms (Bitmap Index Scan parcial), sin mejora real
+  - C3: 13.215 ms (Parallel Seq Scan) → 0.829 ms (Index Only Scan), -93.7%
+  - Conclusión actualizada: ahora SÍ hay mejoras medidas en C1 y C3.
 - Paso 7: Medir costo de escritura (carga masiva con y sin índices) — COMPLETADO ✅
   - INSERT 10,000 filas: 176.119 ms con índices vs 157.706 ms sin índices (+12%)
   - Creación de 6 índices: 324.316 ms total
@@ -173,7 +178,7 @@
 - `db/migrations/008_indices.sql` (6 índices creados con justificación)
 - `docs/informes/informe_etapa4_indices.md` (pasos 1 a 8 completos con resultados reales)
 
-**Commit y push:** `a79eb53` — Push a `origin/main` ✅
+**Commit y push:** pendiente (este commit) — a `origin/main`
 
 ---
 

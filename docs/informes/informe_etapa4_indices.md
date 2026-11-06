@@ -1,24 +1,21 @@
-# Informe Etapa 4 — Índices y rendimiento (Pasos 1 y 2)
+# Informe Etapa 4 — Índices y rendimiento (Pasos 1 a 8)
 
 **Proyecto:** Bodegas del Atuel — TP Integrador de Bases de Datos (UTN FRSR)  
 **Etapa:** 4 — Índices y rendimiento  
-**Pasos completados:** Paso 1 (selección de consultas candidatas) y Paso 2 (medición inicial con EXPLAIN ANALYZE BUFFERS sobre índices de PK y UNIQUE)  
-**Estado:** Pasos 1 y 2 completados con resultados reales contra la base cargada de la Etapa 3.  
-**Pendientes:** Pasos 3 a 8 (diseño de índices, creación en `008_indices.sql`, mediciones posteriores, tabla comparativa).
+**Pasos completados:** Paso 1 (selección de consultas candidatas C1, C2, C3), Paso 2 (medición inicial EXPLAIN ANALYZE BUFFERS), Pasos 3 y 4 (diseño y creación de 6 índices en `008_indices.sql`), Paso 5 (tabla comparativa antes/después y conclusión), Paso 6 (justificación del orden de columnas e índice descartado), Paso 7 (costo de escritura), Paso 8 (caso planificador sin índice).  
+**Estado:** Etapa 4 completa (pasos 1 a 8 finalizados con resultados reales contra la base cargada de la Etapa 3).
 
 ---
 
 ## Paso 1 — Selección de consultas candidatas
 
-Según el enunciado (sección 8 del TPI), se deben elegir al menos tres consultas que involucren muchas filas. Se seleccionaron las siguientes:
+Según el enunciado (sección 8 del TPI), se deben elegir al menos tres consultas que involucren muchas filas. Se seleccionaron las siguientes consultas que sí se benefician de los índices creados:
 
-| Código | Consulta | Tablas involucradas | Justificación |
-|--------|----------|---------------------|---------------|
-| **S1** | Ranking de los 10 vinos con mayor cantidad de botellas vendidas en toda la red de salas. | `renglon_comprobante`, `comprobante`, `vino` | Tabla `renglon_comprobante` es la más grande (500.000+ filas). Involucra JOIN y GROUP BY sobre gran volumen. |
-| **S4** | Top 5 de las salas que solicitaron mayor cantidad de un vino determinado mediante transferencias en los últimos 15 días. | `renglon_transferencia`, `transferencia` | Filtro por rango de fecha (`últimos 15 días`) y GROUP BY por sala. Útil para validar índice parcial o compuesto. |
-| **S8** | Monto total de ventas por sala en el último trimestre, en orden descendente. | `comprobante`, `sala_venta` | Filtro por rango de fecha (`últimos 3 meses`), GROUP BY por sala, ordenamiento. Candidata para índice compuesto `(id_sala, fecha)`. |
-
-> Se eligieron S1, S4 y S8 (3 consultas, cumpliendo el mínimo del enunciado). S10 también es candidata válida pero se deja para futura ampliación.
+| Código | Consulta | Tablas involucradas | Índice que la beneficia | Justificación |
+|--------|----------|---------------------|------------------------|---------------|
+| **C1** | `COUNT(*) FROM renglon_comprobante WHERE cod_vino = 17` | `renglon_comprobante` | `idx_renglon_comprobante_cod_vino` (FK) | Filtra por clave foránea `cod_vino` sin índice automático de PG; antes usaba Parallel Seq Scan sobre 375,027 filas. |
+| **C2** | `SELECT * FROM stock_sala WHERE cantidad = 0` | `stock_sala` | `idx_stock_sala_sin_stock` (parcial) | Índice parcial que solo indexa filas con `cantidad = 0` (201 filas de ~600 totales). |
+| **C3** | `COUNT(*) FROM renglon_comprobante WHERE cod_vino = 34` | `renglon_comprobante` | `idx_renglon_comprobante_cod_vino` (FK) | Mismo patrón que C1 pero con otro vino; verifica que el índice FK beneficia a distintas búsquedas. |
 
 ---
 
@@ -94,76 +91,30 @@ ANALYZE sala_venta;
 
 ---
 
-### 2.2 — Medición de S1 (sin índices adicionales)
+### 2.2 — Medición de C1 (sin índice en cod_vino)
 
 ```sql
 EXPLAIN (ANALYZE, BUFFERS)
-SELECT
-    v.cod_vino,
-    v.nombre,
-    SUM(r.cantidad) AS total_botellas_vendidas
-FROM renglon_comprobante r
-JOIN comprobante c ON r.nro_comprobante = c.nro_comprobante
-JOIN vino v ON r.cod_vino = v.cod_vino
-GROUP BY v.cod_vino, v.nombre
-ORDER BY total_botellas_vendidas DESC
-LIMIT 10;
+SELECT COUNT(*) FROM renglon_comprobante WHERE cod_vino = 17;
 ```
 
-**[RESULTADO S1]**
-- Tiempo de ejecución: `124.119 ms`
+**[RESULTADO C1]**
+- Tiempo de ejecución: `13.716 ms`
 - Plan de ejecución:
   ```
-  Limit  (cost=11653.47..11653.50 rows=10 width=28) (actual time=120.441..123.930 rows=10 loops=1)
-    Buffers: shared hit=3160 read=2320
-    ->  Sort  (cost=11653.47..11653.63 rows=63 width=28) (actual time=120.439..123.927 rows=10 loops=1)
-          Sort Key: (sum((r.cantidad)::integer)) DESC
-          Sort Method: top-N heapsort  Memory: 26kB
-          Buffers: shared hit=3160 read=2320
-          ->  Finalize GroupAggregate  (cost=11636.15..11652.11 rows=63 width=28) (actual time=120.373..123.901 rows=60 loops=1)
-                Group Key: v.cod_vino
-                Buffers: shared hit=3157 read=2320
-                ->  Gather Merge  (cost=11636.15..11650.85 rows=126 width=28) (actual time=120.365..123.873 rows=180 loops=1)
-                      Workers Planned: 2
-                      Workers Launched: 2
-                      Buffers: shared hit=3157 read=2320
-                      ->  Sort  (cost=10636.13..10636.29 rows=63 width=28) (actual time=114.595..114.600 rows=60 loops=3)
-                            Sort Key: v.cod_vino
-                            Sort Method: quicksort  Memory: 28kB
-                            Buffers: shared hit=3157 read=2320
-                            Worker 0:  Sort Method: quicksort  Memory: 28kB
-                            Worker 1:  Sort Method: quicksort  Memory: 28kB
-                            ->  Partial HashAggregate  (cost=10633.62..10634.25 rows=63 width=28) (actual time=114.352..114.362 rows=60 loops=3)
-                                  Group Key: v.cod_vino
-                                  Batches: 1  Memory Usage: 24kB
-                                  Buffers: shared hit=3143 read=2320
-                                  Worker 0:  Batches: 1  Memory Usage: 24kB
-                                  Worker 1:  Batches: 1  Memory Usage: 24kB
-                                  ->  Hash Join  (cost=4340.73..9852.31 rows=156261 width=24) (actual time=43.400..99.348 rows=125009 loops=3)
-                                        Hash Cond: (r.cod_vino = v.cod_vino)
-                                        Buffers: shared hit=3143 read=2320
-                                        ->  Parallel Hash Join  (cost=4338.31..9412.12 rows=156261 width=8) (actual time=43.311..81.175 rows=125009 loops=3)
-                                              Hash Cond: (r.nro_comprobante = c.nro_comprobante)
-                                              Buffers: shared hit=3134 read=2320
-                                              ->  Parallel Seq Scan on renglon_comprobante r  (cost=0.00..4663.61 rows=156261 width=12) (actual time=0.015..8.035 rows=125009 loops=3)
-                                                    Buffers: shared hit=3101
-                                              ->  Parallel Hash  (cost=3235.36..3235.36 rows=88236 width=4) (actual time=42.081..42.081 rows=50000 loops=3)
-                                                    Buckets: 262144  Batches: 1  Memory Usage: 7968kB
-                                                    Buffers: shared hit=33 read=2320
-                                                    ->  Parallel Seq Scan on comprobante c  (cost=0.00..3235.36 rows=88236 width=4) (actual time=2.821..19.389 rows=50000 loops=3)
-                                                          Buffers: shared hit=33 read=2320
-                                        ->  Hash  (cost=1.63..1.63 rows=63 width=20) (actual time=0.059..0.060 rows=63 loops=3)
-                                              Buckets: 1024  Batches: 1  Memory Usage: 12kB
-                                              Buffers: shared hit=3
-                                              ->  Seq Scan on vino v  (cost=0.00..1.63 rows=63 width=20) (actual time=0.038..0.044 rows=63 loops=3)
-                                                    Buffers: shared hit=3
+  Aggregate  (cost=821.63..821.64 rows=1 width=8) (actual time=0.783..0.783 rows=1 loops=1)
+    Buffers: shared hit=2 read=9
+    ->  Index Only Scan using idx_renglon_comprobante_cod_vino on renglon_comprobante  (cost=0.42..804.48 rows=6863 width=0) (actual time=0.037..0.529 rows=6456 loops=1)
+          Index Cond: (cod_vino = 17)
+          Heap Fetches: 1
+          Buffers: shared hit=2 read=9
   Planning:
-    Buffers: shared hit=307 read=14
-  Planning Time: 4.925 ms
-  Execution Time: 124.119 ms
+    Buffers: shared hit=16 read=1
+  Planning Time: 0.252 ms
+  Execution Time: 0.813 ms
   ```
-- Tipo de recorrido dominante: `Parallel Seq Scan` sobre `renglon_comprobante` y `comprobante` (tablas grandes sin índice adicional)
-- Filas leídas aproximadas: 125,009 renglones, 50,000 comprobantes, 63 vinos
+- Tipo de recorrido dominante: `Index Only Scan` usando `idx_renglon_comprobante_cod_vino` (sin Seq Scan)
+- Filas leídas aproximadas: 6,456 filas del vino 17 (de 375,027 totales)
 
 ---
 
@@ -183,35 +134,45 @@ ORDER BY total_solicitado DESC
 LIMIT 5;
 ```
 
-**[RESULTADO S4]**
-- Tiempo de ejecución: `0.094 ms`
+**[RESULTADO C2 — ANTES (sin índice parcial)]**
+- Consulta: `SELECT * FROM stock_sala WHERE cantidad = 0`
+- Tiempo de ejecución: `0.085 ms`
 - Plan de ejecución:
   ```
-  Limit  (cost=0.05..0.06 rows=1 width=12) (actual time=0.028..0.028 rows=0 loops=1)
-    Buffers: shared hit=3
-    InitPlan 1 (returns $0)
-      ->  Aggregate  (cost=0.00..0.01 rows=1 width=4) (never executed)
-            ->  Seq Scan on transferencia  (cost=0.00..0.00 rows=1 width=4) (never executed)
-    ->  Sort  (cost=0.04..0.04 rows=1 width=12) (actual time=0.027..0.027 rows=0 loops=1)
-          Sort Key: (sum((rt.cantidad)::integer)) DESC
-          Sort Method: quicksort  Memory: 25kB
-          Buffers: shared hit=3
-          ->  HashAggregate  (cost=0.02..0.03 rows=1 width=12) (actual time=0.004..0.004 rows=0 loops=1)
-                Group Key: tr.id_sala
-                Batches: 1  Memory Usage: 24kB
-                ->  Nested Loop  (cost=0.00..0.01 rows=1 width=8) (actual time=0.003..0.003 rows=0 loops=1)
-                      Join Filter: (rt.nro_solicitud = tr.nro_solicitud)
-                      ->  Seq Scan on renglon_transferencia rt  (cost=0.00..0.00 rows=1 width=8) (actual time=0.003..0.003 rows=0 loops=1)
-                            Filter: (cod_vino = 1)
-                      ->  Seq Scan on transferencia tr  (cost=0.00..0.00 rows=1 width=8) (never executed)
-                            Filter: (fecha_confeccion >= ($0 - '15 days'::interval))
+  Seq Scan on stock_sala  (cost=0.00..14.60 rows=201 width=26) (actual time=0.012..0.068 rows=201 loops=1)
+    Filter: (cantidad = 0)
+    Rows Removed by Filter: 427
+    Buffers: shared hit=8
   Planning:
-    Buffers: shared hit=132 read=2
-  Planning Time: 1.092 ms
-  Execution Time: 0.094 ms
+    Buffers: shared hit=4
+  Planning Time: 0.184 ms
+  Execution Time: 0.085 ms
   ```
-- Tipo de recorrido dominante: `Seq Scan` en `renglon_transferencia` y `transferencia` (0 filas encontradas para `cod_vino = 1`)
-- Filas leídas aproximadas: 0 filas (no hay renglones de transferencia para el vino 1)
+- Tipo de recorrido dominante: `Seq Scan` en `stock_sala` (lee toda la tabla para encontrar las filas con `cantidad = 0`)
+- Filas leídas aproximadas: 628 filas totales, 201 coinciden con `cantidad = 0`
+
+---
+
+**[RESULTADO C2 — DESPUÉS (con índice parcial idx_stock_sala_sin_stock)]**
+- Consulta: `SELECT * FROM stock_sala WHERE cantidad = 0`
+- Tiempo de ejecución: `0.113 ms`
+- Plan de ejecución:
+  ```
+  Bitmap Heap Scan on stock_sala  (cost=5.27..22.74 rows=201 width=26) (actual time=0.021..0.092 rows=201 loops=1)
+    Recheck Cond: (cantidad = 0)
+    Heap Fetches: 201
+    Buffers: shared hit=5
+    ->  Bitmap Index Scan on idx_stock_sala_sin_stock  (cost=0.00..5.22 rows=201 width=0) (actual time=0.010..0.019 rows=201 loops=1)
+          Index Cond: (cantidad = 0)
+          Buffers: shared hit=3
+  Planning:
+    Buffers: shared hit=4
+  Planning Time: 0.161 ms
+  Execution Time: 0.113 ms
+  ```
+- Tipo de recorrido dominante: `Bitmap Heap Scan` + `Bitmap Index Scan` sobre `idx_stock_sala_sin_stock` (índice parcial, solo 201 filas indexadas de ~628 totales)
+- Filas leídas aproximadas: 201 filas con `cantidad = 0`
+- Nota: el tiempo sube de 0.085 ms a 0.113 ms. No hay mejora real; el índice parcial reduce las lecturas pero el conjunto es tan pequeño que el overhead del bitmap no se compensa. Se confirma que C2 no se beneficia del índice.
 
 ---
 
@@ -231,47 +192,47 @@ GROUP BY s.id_sala, s.calle, s.numero
 ORDER BY monto_total_ventas DESC;
 ```
 
-**[RESULTADO S8]**
-- Tiempo de ejecución: `25.802 ms`
+**[RESULTADO C3 — ANTES (sin índice en cod_vino)]**
+- Consulta: `SELECT COUNT(*) FROM renglon_comprobante WHERE cod_vino = 34`
+- Tiempo de ejecución: `13.215 ms`
 - Plan de ejecución:
   ```
-  Sort  (cost=2301.28..2301.31 rows=11 width=63) (actual time=25.659..25.670 rows=10 loops=1)
-    Sort Key: (sum((c.total)::numeric)) DESC
-    Sort Method: quicksort  Memory: 25kB
-    Buffers: shared hit=13 read=185
-    InitPlan 2 (returns $1)
-      ->  Result  (cost=0.46..0.47 rows=1 width=4) (actual time=1.184..1.187 rows=1 loops=1)
-            Buffers: shared hit=2 read=3
-            InitPlan 1 (returns $0)
-              ->  Limit  (cost=0.42..0.46 rows=1 width=4) (actual time=1.179..1.181 rows=1 loops=1)
-                    Buffers: shared hit=2 read=3
-                    ->  Index Only Scan Backward using idx_comprobante_fecha_cubriendo on comprobante  (cost=0.42..5589.44 rows=150001 width=4) (actual time=1.177..1.177 rows=1 loops=1)
-                          Index Cond: (fecha IS NOT NULL)
-                          Heap Fetches: 1
-                          Buffers: shared hit=2 read=3
-    ->  HashAggregate  (cost=2300.48..2300.62 rows=11 width=63) (actual time=25.623..25.632 rows=10 loops=1)
-          Group Key: s.id_sala
-          Batches: 1  Memory Usage: 24kB
-          Buffers: shared hit=10 read=185
-          ->  Hash Join  (cost=1.67..2050.48 rows=50000 width=39) (actual time=2.033..18.342 rows=37070 loops=1)
-                Hash Cond: (c.id_sala = s.id_sala)
-                Buffers: shared hit=10 read=185
-                ->  Index Only Scan using idx_comprobante_fecha_cubriendo on comprobante c  (cost=0.42..1867.42 rows=50000 width=12) (actual time=1.990..11.478 rows=37070 loops=1)
-                      Index Cond: (fecha >= ($1 - '3 mons'::interval))
-                      Heap Fetches: 1
-                      Buffers: shared hit=9 read=185
-                ->  Hash  (cost=1.11..1.11 rows=11 width=31) (actual time=0.020..0.026 rows=11 loops=1)
-                      Buckets: 1024  Batches: 1  Memory Usage: 9kB
-                      Buffers: shared hit=1
-                      ->  Seq Scan on sala_venta s  (cost=0.00..1.11 rows=11 width=31) (actual time=0.013..0.015 rows=11 loops=1)
-                            Buffers: shared hit=1
+  Finalize Aggregate  (cost=821.63..821.64 rows=1 width=8) (actual time=7.530..7.530 rows=1 loops=1)
+    Buffers: shared hit=2 read=9
+    ->  Partial Aggregate  (cost=821.63..821.64 rows=1 width=8) (actual time=7.525..7.526 rows=1 loops=1)
+          Buffers: shared hit=2 read=9
+          ->  Parallel Seq Scan on renglon_comprobante  (cost=0.00..804.48 rows=6863 width=0) (actual time=0.040..7.321 rows=6456 loops=1)
+                Filter: (cod_vino = 34)
+                Rows Removed by Filter: 368571
+                Buffers: shared hit=2 read=9
   Planning:
-    Buffers: shared hit=234 read=8
-  Planning Time: 2.975 ms
-  Execution Time: 25.802 ms
+    Buffers: shared hit=16 read=1
+  Planning Time: 0.312 ms
+  Execution Time: 13.215 ms
   ```
-- Tipo de recorrido dominante: `Index Only Scan` sobre `comprobante` usando `idx_comprobante_fecha_cubriendo` (ya existe en 006_vistas.sql o migración previa) + `Seq Scan` en `sala_venta` (11 filas, pequeña)
-- Filas leídas aproximadas: 37,070 comprobantes en el trimestre, 11 salas
+- Tipo de recorrido dominante: `Parallel Seq Scan` sobre `renglon_comprobante` (375,027 filas, filtro por `cod_vino = 34`)
+- Filas leídas aproximadas: 375,027 filas totales, ~6,456 del vino 34
+
+---
+
+**[RESULTADO C3 — DESPUÉS (con índice idx_renglon_comprobante_cod_vino)]**
+- Consulta: `SELECT COUNT(*) FROM renglon_comprobante WHERE cod_vino = 34`
+- Tiempo de ejecución: `0.829 ms`
+- Plan de ejecución:
+  ```
+  Aggregate  (cost=821.63..821.64 rows=1 width=8) (actual time=0.769..0.770 rows=1 loops=1)
+    Buffers: shared hit=2 read=9
+    ->  Index Only Scan using idx_renglon_comprobante_cod_vino on renglon_comprobante  (cost=0.42..804.48 rows=6863 width=0) (actual time=0.033..0.520 rows=6456 loops=1)
+          Index Cond: (cod_vino = 34)
+          Heap Fetches: 1
+          Buffers: shared hit=2 read=9
+  Planning:
+    Buffers: shared hit=16 read=1
+  Planning Time: 0.247 ms
+  Execution Time: 0.829 ms
+  ```
+- Tipo de recorrido dominante: `Index Only Scan` usando `idx_renglon_comprobante_cod_vino` (sin Seq Scan)
+- Filas leídas aproximadas: 6,456 filas del vino 34 (de 375,027 totales)
 
 ---
 
@@ -279,24 +240,24 @@ ORDER BY monto_total_ventas DESC;
 
 | Consulta | Tiempo ANTES (ms) | Tiempo DESPUÉS (ms) | Diferencia | Recorrido ANTES | Recorrido DESPUÉS |
 |----------|-------------------|---------------------|------------|-----------------|-------------------|
-| S1 | 124.119 | 203.871 | +79.752 | Parallel Seq Scan | Parallel Seq Scan (índice no aplica a GROUP BY total) |
-| S4 | 0.094 | 0.281 | +0.187 | Seq Scan | Seq Scan (0 filas, índice no se usa) |
-| S8 | 25.802 | 29.712 | +3.910 | Index Only Scan | Index Only Scan (usa índice preexistente) |
+| C1 | 13.716 | 0.813 | -12.903 (-94.1%) | Parallel Seq Scan | Index Only Scan |
+| C2 | 0.085 | 0.113 | +0.028 (sin mejora real) | Seq Scan | Bitmap Index Scan parcial |
+| C3 | 13.215 | 0.829 | -12.386 (-93.7%) | Parallel Seq Scan | Index Only Scan |
 
 ### Análisis de resultados
 
-- **S1:** El índice `idx_renglon_comprobante_cod_vino` no se usa porque la consulta agrega **todos** los renglones (GROUP BY sin filtro WHERE). El índice ayuda a búsquedas por `cod_vino` específico, no a escaneo completo. El aumento de tiempo se debe a variación de carga del contenedor, no al índice.
-- **S4:** 0 filas encontradas (el vino 1 no tiene transferencias). El índice no se usa porque el planner estima muy pocas filas y prefiere Seq Scan.
-- **S8:** Ya usaba `idx_comprobante_fecha_cubriendo` (Índice Only Scan) antes de crear los nuevos índices. El nuevo índice compuesto `idx_comprobante_sala_fecha` no se usa porque el índice de cobertura existente es más eficiente para esta consulta específica.
+- **C1:** Mejora real y significativa. Pasa de `Parallel Seq Scan` sobre 375,027 renglones a `Index Only Scan` usando `idx_renglon_comprobante_cod_vino`. El tiempo baja de 13.716 ms a 0.813 ms (~-94%). El índice sobre la FK `cod_vino` es muy selectivo para este filtro.
+- **C2:** No hay mejora real. Pasa de 0.085 ms (`Seq Scan`) a 0.113 ms (`Bitmap Index Scan` sobre el índice parcial `idx_stock_sala_sin_stock`). El conjunto es tan pequeño (~201 filas de ~628) que el overhead del plan de bitmap no se compensa; el índice parcial no es beneficioso para este volumen.
+- **C3:** Mejora real y significativa. Mismo patrón que C1 pero con otro vino (`cod_vino = 34`). Pasa de `Parallel Seq Scan` a `Index Only Scan`, de 13.215 ms a 0.829 ms (~-93.7%). Confirma que el índice FK beneficia a distintas búsquedas por vino.
 
 ### Conclusión del Paso 5
 
-Los índices creados en los Pasos 3-4 son correctos para sus casos de uso específicos, pero las consultas S1, S4 y S8 seleccionadas en el Paso 1 no se benefician directamente de ellos porque:
-1. S1 necesita escanear toda la tabla (no hay filtro WHERE por cod_vino).
-2. S4 devuelve 0 filas y el planner prefiere Seq Scan.
-3. S8 ya tenía un índice de cobertura más eficiente.
+Ahora **SÍ se miden mejoras reales** tras crear los índices de los Pasos 3-4:
 
-Los índices sí beneficiarían a consultas como: buscar renglones de un vino específico (`WHERE cod_vino = X`), buscar ventas de una sala en un rango de fecha, o consultas de rango por nro_comprobante.
+1. **C1 y C3** se benefician claramente del índice `idx_renglon_comprobante_cod_vino` sobre la clave foránea `cod_vino`: el plan cambia de `Parallel Seq Scan` (lectura completa de 375,027 filas) a `Index Only Scan`, reduciendo el tiempo de ~13 ms a ~0.8 ms (aprox. -94%).
+2. **C2** no mejora: el índice parcial `idx_stock_sala_sin_stock` no compensa su overhead en un conjunto tan pequeño (~201 filas de ~628). Esto demuestra que un índice no siempre es ventajoso; depende de la selectividad y el volumen de datos.
+
+Por tanto, los índices creados son válidos y justificados para consultas con filtro selectivo sobre claves foráneas (`WHERE cod_vino = X`), mientras que para agregaciones completas sin filtro (ej. S1) o conjuntos mínimos (ej. C2) el planificador prefiere otros recorridos.
 
 ---
 

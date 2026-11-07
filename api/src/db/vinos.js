@@ -1,6 +1,6 @@
 const { pool } = require('./index');
 
-async function listarVinos({ page = 1, limit = 10, tipo, cepa, bodega, anada }) {
+async function listarVinos({ page = 1, limit = 10, tipo, cepa, bodega, anada, nombre }) {
   const offset = (page - 1) * limit;
   const params = [];
   let condiciones = [];
@@ -17,6 +17,10 @@ async function listarVinos({ page = 1, limit = 10, tipo, cepa, bodega, anada }) 
     params.push(`%${bodega}%`);
     condiciones.push(`EXISTS (SELECT 1 FROM bodega b WHERE b.id_bodega = v.id_bodega AND b.razon_social ILIKE $${params.length})`);
   }
+  if (nombre) {
+    params.push(`%${nombre}%`);
+    condiciones.push(`v.nombre ILIKE $${params.length}`);
+  }
   if (anada) {
     params.push(anada);
     condiciones.push(`v.anada = $${params.length}`);
@@ -27,9 +31,16 @@ async function listarVinos({ page = 1, limit = 10, tipo, cepa, bodega, anada }) 
 
   const query = `
     SELECT v.cod_vino, v.nombre, v.tipo, v.anada, v.volumen_ml, v.graduacion, v.precio,
-           b.razon_social AS bodega
+           b.razon_social AS bodega,
+           COALESCE(sd.cantidad, 0) + COALESCE(ss.stock_salas, 0) AS stock_total
     FROM vino v
     JOIN bodega b ON b.id_bodega = v.id_bodega
+    LEFT JOIN stock_deposito sd ON sd.cod_vino = v.cod_vino
+    LEFT JOIN (
+        SELECT cod_vino, SUM(cantidad) AS stock_salas
+        FROM stock_sala
+        GROUP BY cod_vino
+    ) ss ON ss.cod_vino = v.cod_vino
     ${where}
     ORDER BY v.cod_vino
     LIMIT $${params.length - 1} OFFSET $${params.length}

@@ -43,6 +43,12 @@
       <div id="vinos-container">
         <!-- Se llena por JS -->
       </div>
+
+      <div class="pagination" id="paginacion-container">
+        <button id="btn-pagina-anterior" class="pagination-btn">Anterior</button>
+        <span id="label-pagina-actual" class="pagination-current">Página 1</span>
+        <button id="btn-pagina-siguiente" class="pagination-btn">Siguiente</button>
+      </div>
     </div>
   </div>
 
@@ -58,18 +64,47 @@
         alertArea.innerHTML = `<div class="alert alert-${tipo}">${mensaje}</div>`;
       }
 
+      let paginaActual = 1;
+
       async function cargarVinos() {
-        const params = {};
-        if (filtroNombre.value.trim()) params.bodega = filtroNombre.value.trim();
+        const params = {
+          page: paginaActual,
+          limit: 10,
+        };
+        if (filtroNombre.value.trim()) params.nombre = filtroNombre.value.trim();
         if (filtroTipo.value) params.tipo = filtroTipo.value;
 
         try {
           const vinos = await API.listarVinos(params);
           renderizarVinos(vinos);
+          actualizarPaginacion(vinos.length);
         } catch (err) {
           console.error(err);
           mostrarAlerta('error', `Error cargando vinos: ${err.mensaje || err.message}`);
         }
+      }
+
+      function actualizarPaginacion(cantidad) {
+        const btnAnt = document.getElementById('btn-pagina-anterior');
+        const btnSig = document.getElementById('btn-pagina-siguiente');
+        const lblPag = document.getElementById('label-pagina-actual');
+
+        if (lblPag) lblPag.textContent = `Página ${paginaActual}`;
+        if (btnAnt) btnAnt.disabled = paginaActual <= 1;
+        // Si vinieron menos filas que el límite, asumimos que es la última página
+        if (btnSig) btnSig.disabled = cantidad < 10;
+      }
+
+      function paginaAnterior() {
+        if (paginaActual > 1) {
+          paginaActual--;
+          cargarVinos();
+        }
+      }
+
+      function paginaSiguiente() {
+        paginaActual++;
+        cargarVinos();
       }
 
       function renderizarVinos(vinos) {
@@ -104,7 +139,13 @@
         `;
       }
 
-      btnAplicar.addEventListener('click', cargarVinos);
+      btnAplicar.addEventListener('click', () => {
+        paginaActual = 1;
+        cargarVinos();
+      });
+
+      document.getElementById('btn-pagina-anterior').addEventListener('click', paginaAnterior);
+      document.getElementById('btn-pagina-siguiente').addEventListener('click', paginaSiguiente);
 
       // Cargar al iniciar
       cargarVinos();

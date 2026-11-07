@@ -44,6 +44,9 @@
         <div class="card" style="margin-top: 1.5rem;">
           <div class="card-header">
             <h2>🍷 Renglones de Venta</h2>
+            <select id="select-vino-renglon" style="padding:0.6rem 0.8rem;border:1.5px solid var(--color-border);border-radius:var(--radius);font-size:0.9rem;">
+              <option value="">Seleccionar vino...</option>
+            </select>
             <button type="button" id="btn-agregar-renglon" class="btn btn-primary btn-small">+ Agregar Vino</button>
           </div>
 
@@ -152,10 +155,7 @@
         try {
           const [clientesResp, salasResp, vinosResp] = await Promise.all([
             API.listarClientes(),
-            // Salas: usamos listarVinos solo para obtener vinos; salas vendrían de una API de salas si existiera.
-            // Como no hay endpoint de salas listadas, usamos un valor por defecto o solicitamos al backend.
-            // Para este front, usamos sala_id = 1 por defecto y mostramos un input.
-            Promise.resolve([{ id_sala: 1, nombre: 'Sala 1 - Centro', calle: 'Av. Principal', numero: '100' }]),
+            API.listarSalas(),
             API.listarVinos({ limit: 100 })
           ]);
 
@@ -170,13 +170,18 @@
             </option>
           `).join('');
 
-          // Llenar select de salas
+          // Llenar select de salas (desde la API real)
           selectSala.innerHTML = salas.map(s => `
-            <option value="${s.id_sala}">${s.nombre || s.calle + ' ' + s.numero}</option>
+            <option value="${s.id_sala}">${s.calle} ${s.numero}, ${s.localidad}</option>
           `).join('');
 
-          clienteSeleccionado = clientes[0];
-          actualizarDescuentoCliente(clientes[0]);
+          // Llenar select de vinos para agregar al renglón
+          const selectVino = document.getElementById('select-vino-renglon');
+          selectVino.innerHTML = '<option value="">Seleccionar vino...</option>' + vinos.map(v => `
+            <option value="${v.cod_vino}">${v.nombre} (${v.tipo}, ${v.anada}) - $${Number(v.precio).toLocaleString('es-AR', {minimumFractionDigits:2})}</option>
+          `).join('');
+
+          clienteSeleccionado = clientes[0] || null;
 
         } catch (err) {
           console.error(err);
@@ -184,19 +189,9 @@
         }
       }
 
-      function actualizarDescuentoCliente(cliente) {
-        clienteSeleccionado = cliente;
-        // Actualizar descuento en todos los renglones existentes según el tipo de cliente
-        renglones.forEach(r => {
-          r.descuento_aplicado = parseFloat(cliente.descuento) || 0;
-        });
-        renderizarRenglones();
-      }
-
       selectCliente.addEventListener('change', (e) => {
         const id = parseInt(e.target.value);
-        const cliente = clientes.find(c => c.id_cliente === id);
-        if (cliente) actualizarDescuentoCliente(cliente);
+        clienteSeleccionado = clientes.find(c => c.id_cliente === id) || null;
       });
 
       btnAgregar.addEventListener('click', () => {
@@ -205,23 +200,35 @@
           return;
         }
 
-        // Seleccionar vino (simple: mostrar select rápido o usar el primero)
-        const vino = vinosDisponibles[0];
-        const descuento = parseFloat(clienteSeleccionado.descuento) || 0;
+        const selectVino = document.getElementById('select-vino-renglon');
+        const codVino = parseInt(selectVino.value);
+        if (!codVino) {
+          mostrarAlerta('warning', 'Seleccioná un vino para agregar.');
+          return;
+        }
+
+        const vino = vinosDisponibles.find(v => v.cod_vino === codVino);
+        if (!vino) {
+          mostrarAlerta('error', 'Vino no encontrado.');
+          return;
+        }
 
         // Verificar si ya está agregado
         const existe = renglones.find(r => r.cod_vino === vino.cod_vino);
         if (existe) {
           existe.cantidad += 1;
         } else {
+          // Regla de oro: el front NO calcula descuentos. Se envía 0 y la BD aplica
+          // el descuento correspondiente según el tipo de cliente (RN-06).
           renglones.push({
             cod_vino: vino.cod_vino,
             nombre_vino: vino.nombre,
             cantidad: 1,
             precio_unitario: parseFloat(vino.precio),
-            descuento_aplicado: descuento
+            descuento_aplicado: 0
           });
         }
+        selectVino.value = '';
         renderizarRenglones();
       });
 
@@ -270,10 +277,6 @@
           btnGuardar.disabled = false;
           btnGuardar.textContent = 'Generar Comprobante';
         }
-      });
-
-      btnGuardar.addEventListener('click', (e) => {
-        formVenta.requestSubmit ? formVenta.requestSubmit() : formVenta.dispatchEvent(new Event('submit'));
       });
 
       const btnCancelar = document.getElementById('btn-cancelar');

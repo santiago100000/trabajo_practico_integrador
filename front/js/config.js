@@ -24,6 +24,9 @@ const CONFIG = {
     // Vinos
     VINOS: '/vinos',
 
+    // Salas de venta
+    SALAS: '/salas',
+
     // Clientes
     CLIENTES: '/clientes',
 

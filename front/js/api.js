@@ -66,6 +66,13 @@ const API = (() => {
   }
 
   // ============================================================================
+  // SALAS DE VENTA
+  // ============================================================================
+  async function listarSalas() {
+    return request(CONFIG.ENDPOINTS.SALAS);
+  }
+
+  // ============================================================================
   // VINOS
   // ============================================================================
   async function listarVinos(params = {}) {
@@ -75,6 +82,7 @@ const API = (() => {
     if (params.tipo) qs.set('tipo', params.tipo);
     if (params.cepa) qs.set('cepa', params.cepa);
     if (params.bodega) qs.set('bodega', params.bodega);
+    if (params.nombre) qs.set('nombre', params.nombre);
     if (params.anada) qs.set('anada', params.anada);
     const path = qs.toString()
       ? `${CONFIG.ENDPOINTS.VINOS}?${qs.toString()}`
@@ -235,6 +243,7 @@ const API = (() => {
 
   return {
     salud,
+    listarSalas,
     listarVinos,
     obtenerVino,
     crearVino,

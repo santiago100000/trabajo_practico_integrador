@@ -50,9 +50,7 @@
         <div style="display:flex; align-items:center; gap:1rem;">
           <label for="sala-reporte">Sala:</label>
           <select id="sala-reporte">
-            <option value="1">Sala 1</option>
-            <option value="2">Sala 2</option>
-            <option value="3">Sala 3</option>
+            <option value="">Cargando salas...</option>
           </select>
           <button id="btn-ver-sin-stock" class="btn btn-primary btn-small">Ver</button>
         </div>
@@ -186,9 +184,27 @@
         }
       }
 
+      // --- Salas dinámicas para reporte de sin stock ---
+      async function cargarSalasReporte() {
+        try {
+          const salas = await API.listarSalas();
+          const select = document.getElementById('sala-reporte');
+          select.innerHTML = '<option value="">Seleccionar sala...</option>' + salas.map(s => `
+            <option value="${s.id_sala}">${s.calle} ${s.numero}, ${s.localidad}</option>
+          `).join('');
+        } catch (err) {
+          console.error(err);
+          document.getElementById('sala-reporte').innerHTML = '<option value="">Error cargando salas</option>';
+        }
+      }
+
       document.getElementById('btn-ver-sin-stock').addEventListener('click', (e) => {
         e.preventDefault();
         const idSala = document.getElementById('sala-reporte').value;
+        if (!idSala) {
+          mostrarAlerta('warning', 'Seleccioná una sala.');
+          return;
+        }
         cargarVinosSinStock(idSala);
       });
 
@@ -229,9 +245,13 @@
       });
 
       // Cargar todo al iniciar
-      cargarTopVinos();
-      cargarVentasSala();
-      cargarVinosSinStock(1);
+      async function init() {
+        await cargarSalasReporte();
+        cargarTopVinos();
+        cargarVentasSala();
+      }
+
+      init();
     })();
   </script>
 </body>

@@ -23,6 +23,82 @@
 
     <div id="alert-area"></div>
 
+    <!-- Formulario de alta de cliente -->
+    <div class="card">
+      <div class="card-header">
+        <h2>➕ Alta de Cliente</h2>
+      </div>
+      <form id="form-cliente">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="cli-tipo-cliente">Tipo de cliente</label>
+            <select id="cli-tipo-cliente" required>
+              <option value="socio">Socio</option>
+              <option value="distribuidor">Distribuidor</option>
+              <option value="exportador">Exportador</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="cli-nombre">Nombre / Razón Social</label>
+            <input type="text" id="cli-nombre" required>
+          </div>
+          <div class="form-group">
+            <label for="cli-tipo-doc">Tipo de documento</label>
+            <select id="cli-tipo-doc" required>
+              <option value="DNI">DNI</option>
+              <option value="CUIT">CUIT</option>
+              <option value="CUIL">CUIL</option>
+              <option value="PASAPORTE">Pasaporte</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="cli-nro-doc">Número de documento</label>
+            <input type="text" id="cli-nro-doc" required>
+          </div>
+          <div class="form-group">
+            <label for="cli-direccion">Dirección</label>
+            <input type="text" id="cli-direccion" required>
+          </div>
+          <div class="form-group">
+            <label for="cli-id-localidad">ID de localidad</label>
+            <input type="number" id="cli-id-localidad" required min="1">
+          </div>
+          <div class="form-group">
+            <label for="cli-subtipo">Subtipo</label>
+            <select id="cli-subtipo">
+              <option value="socio">Socio</option>
+              <option value="distribuidor">Distribuidor</option>
+              <option value="exportador">Exportador</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="cli-email">Email</label>
+            <input type="email" id="cli-email">
+          </div>
+          <div class="form-group">
+            <label for="cli-telefono">Teléfono</label>
+            <input type="tel" id="cli-telefono">
+          </div>
+          <div class="form-group">
+            <label for="cli-zona-cobertura">Zona de cobertura (distribuidor)</label>
+            <input type="text" id="cli-zona-cobertura">
+          </div>
+          <div class="form-group">
+            <label for="cli-nro-habilitacion">Nro. habilitación (distribuidor)</label>
+            <input type="text" id="cli-nro-habilitacion">
+          </div>
+          <div class="form-group">
+            <label for="cli-pais-destino">País de destino (exportador)</label>
+            <input type="text" id="cli-pais-destino">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" id="btn-limpiar-cliente" class="btn btn-outline">Limpiar</button>
+          <button type="submit" id="btn-guardar-cliente" class="btn btn-success">Crear Cliente</button>
+        </div>
+      </form>
+    </div>
+
     <div class="card">
       <div class="card-header">
         <h2>Listado de Clientes</h2>
@@ -78,6 +154,9 @@
               <td>
                 <span style="font-size:0.8rem;">Socio: ${esSocio}<br>Dist: ${esDistribuidor}<br>Exp: ${esExportador}</span>
               </td>
+              <td>
+                <button type="button" class="btn btn-danger btn-small" onclick="eliminarCliente(${c.id_cliente})">Eliminar</button>
+              </td>
             </tr>
           `;
         }).join('');
@@ -86,13 +165,67 @@
           <table>
             <thead>
               <tr>
-                <th>ID</th><th>Nombre / Razón Social</th><th>Tipo</th><th>Documento</th><th>Descuento</th><th>Subtipos</th>
+                <th>ID</th><th>Nombre / Razón Social</th><th>Tipo</th><th>Documento</th><th>Descuento</th><th>Subtipos</th><th>Acciones</th>
               </tr>
             </thead>
             <tbody>${filas}</tbody>
           </table>
         `;
       }
+
+      window.eliminarCliente = async function(id) {
+        if (!confirm('¿Eliminar este cliente?')) return;
+        try {
+          await API.eliminarCliente(id);
+          mostrarAlerta('success', 'Cliente eliminado correctamente.');
+          cargarClientes();
+        } catch (err) {
+          mostrarAlerta('error', err.mensaje || err.message || 'Error eliminando cliente');
+        }
+      }
+
+      // Formulario de alta de cliente
+      const formCliente = document.getElementById('form-cliente');
+      const btnLimpiarCliente = document.getElementById('btn-limpiar-cliente');
+
+      btnLimpiarCliente.addEventListener('click', () => {
+        formCliente.reset();
+      });
+
+      formCliente.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const tipoCliente = document.getElementById('cli-tipo-cliente').value;
+        const subtipo = document.getElementById('cli-subtipo').value;
+
+        const data = {
+          tipo_cliente: tipoCliente,
+          nombre_razon_social: document.getElementById('cli-nombre').value,
+          tipo_doc: document.getElementById('cli-tipo-doc').value,
+          nro_doc: document.getElementById('cli-nro-doc').value,
+          direccion: document.getElementById('cli-direccion').value,
+          id_localidad: parseInt(document.getElementById('cli-id-localidad').value),
+          subtipo: subtipo,
+          email: document.getElementById('cli-email').value || null,
+          telefono: document.getElementById('cli-telefono').value || null,
+        };
+
+        if (subtipo === 'distribuidor') {
+          data.zona_cobertura = document.getElementById('cli-zona-cobertura').value || null;
+          data.nro_habilitacion = document.getElementById('cli-nro-habilitacion').value || null;
+        }
+        if (subtipo === 'exportador') {
+          data.pais_destino = document.getElementById('cli-pais-destino').value || null;
+        }
+
+        try {
+          await API.crearCliente(data);
+          mostrarAlerta('success', 'Cliente creado correctamente.');
+          formCliente.reset();
+          cargarClientes();
+        } catch (err) {
+          mostrarAlerta('error', err.mensaje || err.message || 'Error creando cliente');
+        }
+      });
 
       cargarClientes();
     })();

@@ -4,6 +4,7 @@ const errorHandler = require('./middlewares/errorHandler');
 
 const saludRoutes = require('./routes/saludRoutes');
 const vinosRoutes = require('./routes/vinosRoutes');
+const salasRoutes = require('./routes/salasRoutes');
 const clientesRoutes = require('./routes/clientesRoutes');
 const comprobantesRoutes = require('./routes/comprobantesRoutes');
 const transferenciasRoutes = require('./routes/transferenciasRoutes');
@@ -17,6 +18,7 @@ app.use(express.json());
 
 app.use(saludRoutes);
 app.use(vinosRoutes);
+app.use(salasRoutes);
 app.use(clientesRoutes);
 app.use(comprobantesRoutes);
 app.use(transferenciasRoutes);

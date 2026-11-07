@@ -58,7 +58,12 @@ GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO bodegas_owner;
 GRANT ALL ON ALL PROCEDURES IN SCHEMA public TO bodegas_owner;
 
 -- ---------------------------------------------------------------------------
--- 5. GRANT mínimos para app_rw (API: lectura/escritura en tablas de negocio,
+-- 5. USAGE en esquema public para app_rw (necesario para acceder a tablas)
+-- ---------------------------------------------------------------------------
+GRANT USAGE ON SCHEMA public TO app_rw;
+
+-- ---------------------------------------------------------------------------
+-- 6. GRANT mínimos para app_rw (API: lectura/escritura en tablas de negocio,
 --    uso de secuencias, ejecución de funciones y procedimientos)
 -- ---------------------------------------------------------------------------
 
@@ -87,6 +92,9 @@ GRANT EXECUTE ON ALL PROCEDURES IN SCHEMA public TO app_rw;
 -- ---------------------------------------------------------------------------
 -- 6. GRANT mínimos para reporte_ro (solo lectura para reportes)
 -- ---------------------------------------------------------------------------
+
+-- USAGE en esquema public para reporte_ro (necesario para acceder a tablas y vistas)
+GRANT USAGE ON SCHEMA public TO reporte_ro;
 
 -- Tablas: solo SELECT
 GRANT SELECT ON

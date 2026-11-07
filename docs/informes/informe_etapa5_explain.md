@@ -4,7 +4,7 @@ Este documento registra los planes de ejecución medidos con `EXPLAIN (ANALYZE, 
 
 Base de datos: PostgreSQL 16 (Docker), datos cargados Etapa 3 (semilla 42).
 
-**Nota sobre S12a:** La consulta original usaba `NOT EXISTS` correlionado doble (división relacional), lo que generaba un plan de costo extremadamente alto y un timeout (>120 segundos) al ejecutar `EXPLAIN ANALYZE`. La consulta fue reescrita en `consultas/select.sql` usando `GROUP BY` + `HAVING COUNT(DISTINCT ...)` para evitar el problema. No se incluye un plan `EXPLAIN ANALYZE` de la versión optimizada porque no se pudo medir contra la base cargada en este entorno.
+**Nota sobre S12a:** La consulta original usaba `NOT EXISTS` correlionado doble (división relacional), lo que generaba un plan de costo extremadamente alto y un timeout (>120 segundos). La consulta fue reescrita en `consultas/select.sql` usando `GROUP BY` + `HAVING COUNT(DISTINCT ...)`. El plan `EXPLAIN ANALYZE` de la versión optimizada se medió en 232.222 ms.
 
 ---
 
@@ -296,9 +296,9 @@ Base de datos: PostgreSQL 16 (Docker), datos cargados Etapa 3 (semilla 42).
 
 ## S12a: Clientes que compraron todos los vinos de una bodega (división relacional)
 
-**Consulta:** NOT EXISTS doble correlacionada sobre `vino` y `renglon_comprobante`.
+**Consulta:** `GROUP BY` + `HAVING COUNT(DISTINCT ...)` sobre `comprobante → renglon_comprobante → vino`, con subconsulta de conteo de vinos de la bodega.
 
-**Resultado:** Timeout al ejecutar con ANALYZE (>120 segundos). Plan sin ANALYZE:
+**Resultado:**
 
 ```
                                                        QUERY PLAN                                                       

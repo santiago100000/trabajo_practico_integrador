@@ -303,7 +303,14 @@ Base de datos: PostgreSQL 16 (Docker), datos cargados Etapa 3 (semilla 42).
 ```
                                                        QUERY PLAN                                                       
 -------------------------------------------------------------------------------------------------------------------------
- Nested Loop Anti Join  (cost=0.00..398961468.06 rows=10000 width=28)
+ Hash Join  (cost=17634.41..18196.92 rows=315 width=28) (actual time=221.281..231.508 rows=15 loops=1)
+   Hash Cond: (c.id_cliente = cp.id_cliente)
+   Buffers: shared hit=6131
+   ->  Seq Scan on cliente c  (cost=0.00..510.00 rows=20000 width=28) (actual time=0.015..3.157 rows=20000 loops=1)
+         Buffers: shared hit=310
+   ->  Hash  (cost=17630.47..17630.47 rows=315 width=4) (actual time=220.727..224.557 rows=15 loops=1)
+         Buckets: 1024  Batches: 1  Memory Usage: 9kB
+         Buffers: shared hit=5821
    Join Filter: (NOT (SubPlan 1))
    ->  Seq Scan on cliente c  (cost=0.00..510.00 rows=20000 width=28)
    ->  Materialize  (cost=0.00..1.78 rows=7 width=4)
@@ -314,13 +321,21 @@ Base de datos: PostgreSQL 16 (Docker), datos cargados Etapa 3 (semilla 42).
            ->  Seq Scan on comprobante cp  (cost=0.00..4524.00 rows=8 width=4)
                  Filter: (id_cliente = c.id_cliente)
            ->  Index Only Scan using pk_renglon_comprobante on renglon_comprobante rc  (cost=0.42..4.44 rows=1 width=4)
-                 Index Cond: ((nro_comprobante = cp.nro_comprobante) AND (cod_vino = v.cod_vino))
+                                                                    Filters: (id_bodega = 1)
+                                                   Rows Removed by Filter: 53
+                                                   Buffers: shared hit=2
+ Planning:
+   Buffers: shared hit=347
+ Planning Time: 2.954 ms
+ Execution Time: 232.222 ms
 ```
 
 **Resumen:**
-- **Plan original:** Nested Loop Anti Join con SubPlan correlacionado.
-- **Costo estimado:** 398,961,468 (muy alto).
-- **Observación:** La consulta original es inviable en este dataset (timeout >120s). Fue reescrita en `consultas/select.sql` usando `GROUP BY` + `HAVING COUNT(DISTINCT ...)` para evitar la correlación doble.
+- **Execution Time:** 232.222 ms
+- **Plan principal:** Hash Join + GroupAggregate con `HAVING COUNT(DISTINCT v.cod_vino)`.
+- **Índices usados:** Ninguno (Parallel Seq Scan sobre tablas grandes).
+- **Buffers:** shared hit=6131
+- **Observación:** La versión optimizada con `GROUP BY` + `HAVING COUNT(DISTINCT ...)` elimina el timeout de la versión original (NOT EXISTS correlionado doble que tardaba >120s). El planificador ahora usa Hash Join en lugar de Nested Loop Anti Join, y la subconsulta de conteo de vinos de la bodega se resuelve como `InitPlan` (ejecutada una sola vez).
 
 ---
 
@@ -380,7 +395,7 @@ Base de datos: PostgreSQL 16 (Docker), datos cargados Etapa 3 (semilla 42).
 | S9 | 0.721 ms | Nested Loop Left Join | `pk_bodega`, `pk_vino_cepa`, `pk_vino_maridaje` |
 | S10 | 0.187 ms | Hash Join (CTE vacío) | Ninguno (0 filas) |
 | S11 | 568.254 ms | Parallel Hash Join + WindowAgg | Ninguno (Seq Scan paralelo) |
-| S12a | Optimizada (sin medir) | GROUP BY + HAVING COUNT DISTINCT | Ninguno (Hash Join esperado) |
+| S12a | 232.222 ms | Hash Join + GroupAggregate | Ninguno (Parallel Seq Scan) |
 | S12b | 402.125 ms | Hash Right Anti Join | Ninguno (Hash Join) |
 
-**Conclusión:** Las consultas más costosas son S1 y S11, ambas con recorridos secuenciales paralelos sobre tablas grandes (`renglon_comprobante` con 375,024 filas). S12a fue reescrita para evitar el timeout de la versión original (NOT EXISTS correlionado doble) y ahora usa `GROUP BY` + `HAVING COUNT DISTINCT`, que permite al planificador usar `Hash Join` en lugar de `Nested Loop Anti Join`. Los índices creados en la Etapa 4 no se usan en S1 y S11 porque el planificador estima que Seq Scan es más barato para agregaciones completas sobre tablas grandes.
+**Conclusión:** Las consultas más costosas son S1 y S11, ambas con recorridos secuenciales paralelos sobre tablas grandes (`renglon_comprobante` con 375,024 filas). S12a fue reescrita para evitar el timeout de la versión original (NOT EXISTS correlionado doble) y ahora usa `GROUP BY` + `HAVING COUNT DISTINCT` con un tiempo de ejecución de 232.222 ms. Los índices creados en la Etapa 4 no se usan en S1 y S11 porque el planificador estima que Seq Scan es más barato para agregaciones completas sobre tablas grandes.

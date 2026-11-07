@@ -3,7 +3,7 @@
 ## Estado general del repositorio
 
 **Rama:** `main`  
-**Último commit:** `b6d60ef` (Front: criterios de aceptación 4, 5, 6 cumplidos)  
+**Último commit:** `04f4791` (fix(etapa7): corregir creación de clientes desde el front)  
 **Push a `origin/main`:** ✅ Sincronizado  
 **Última actualización:** 07/11/2026  
 
@@ -260,26 +260,63 @@
 ### Implementado
 - 5 pantallas en `front/`:
   - `index.html` — Dashboard / Inicio
-  - `vinos.html` — Catálogo de vinos con filtros
-  - `ventas.html` — Nueva venta / comprobantes
-  - `clientes.html` — Listado de clientes
+  - `vinos.html` — Catálogo de vinos con filtros y paginación
+  - `ventas.html` — Nueva venta / comprobantes (select de vinos, salas desde API)
+  - `clientes.html` — Listado de clientes + formulario de alta + eliminar
   - `reportes.html` — Reportes (top vinos, ventas por sala, sin stock, trazabilidad)
 - Capa de servicios centralizada:
   - `front/js/config.js` — URL base de la API configurable (`API_BASE_URL`)
-  - `front/js/api.js` — Todas las llamadas a la API REST (`fetch`, parámetros `$1`, `$2`)
+  - `front/js/api.js` — Todas las llamadas a la API REST (`fetch`, parámetros)
 - Estilos: `front/css/style.css`
 - Servicio `front` en `docker-compose.yml` (nginx, puerto 8081)
+
+### Correcciones realizadas en Etapa 7
+| # | Problema | Solución |
+|---|----------|----------|
+| 1 | `ventas.html` siempre agregaba el primer vino | Select de vinos para elegir cuál vender |
+| 2 | El front calculaba descuentos (violaba regla de oro) | Se envía `descuento_aplicado: 0`, la BD aplica RN-06 |
+| 3 | `vinos.html` filtro "por nombre" buscaba por bodega | Parámetro `nombre` en API y front |
+| 4 | Columna "Stock Total" siempre mostraba 0 | API calcula `stock_total` en `listarVinos()` |
+| 5 | Salas hardcodeadas en `ventas.html` y `reportes.html` | Endpoint `GET /salas` en API, cargado dinámicamente |
+| 6 | `clientes.html` solo listaba, sin CRUD | Formulario de alta + botón eliminar por fila |
+| 7 | `vinos.html` sin paginación | Controles Anterior / Siguiente |
+| 8 | No se podían crear clientes (3 errores) | `fecha_alta` por defecto, `descuento` calculado en API, trigger coherencia deferrable |
+
+### Archivos nuevos (API)
+- `api/src/db/salas.js` — Modelo `listarSalas()`
+- `api/src/controllers/salasController.js` — Controlador de salas
+- `api/src/routes/salasRoutes.js` — Ruta `GET /salas`
+- `db/migrations/005_triggers.sql` — Trigger coherencia → DEFERRABLE
 
 ### Criterios de aceptación cumplidos
 | Criterio | Estado |
 |----------|--------|
 | Las 5 pantallas funcionan contra la API real (localhost:8001) | ✅ |
-| Venta sin stock muestra mensaje de la regla y no deja datos a medias (ROLLBACK en BD) | ✅ |
-| El front NO contiene lógica de cálculo de importes, descuentos ni stock (la BD lo hace vía triggers RN-08/RN-09) | ✅ |
-| Mensajes de error de reglas de negocio mostrados tal como los devuelve la API (sin ocultar ni reemplazar por genéricos) | ✅ |
-| Front incluido en docker-compose.yml (servicio `front`, nginx, puerto 8081) | ✅ |
+| Venta sin stock muestra mensaje de la regla y no deja datos a medias | ✅ |
+| El front NO contiene lógica de cálculo de importes, descuentos ni stock | ✅ |
+| Mensajes de error de reglas de negocio mostrados tal cual | ✅ |
+| Front incluido en docker-compose.yml | ✅ |
+| Creación de clientes funciona (socio, distribuidor, exportador) | ✅ |
 
-**Commit y push:** `b6d60ef` — Push a `origin/main` ✅
+**Commits y push Etapa 7:**
+- `ee1272e` (README), `cf49de2` (informe etapa 6), `08e277e` (fix puertos 8001)
+- `74d217f` (front con 5 pantallas y capa API)
+- `b6d60ef` (front: criterios 4, 5, 6)
+- `d9c2b54` (fix(api): USAGE schema public a app_rw y reporte_ro)
+- `d48798b` (fix(seed): esperar a migrate, OWNER_DB_PASSWORD)
+- `5316f14` (docs(readme): sección de uso diario)
+- `b6b626a` (docs: informe Etapa 7 Frontend)
+- `04f4791` (fix(etapa7): corregir creación de clientes desde el front)
+- Push a `origin/main` ✅
+
+### Informes creados (etapas 1-7)
+- `docs/informes/informe_etapa1_modelado.md`
+- `docs/informes/informe_etapa2_integridad.md`
+- `docs/informes/informe_etapa3_carga_masiva.md`
+- `docs/informes/informe_etapa4_indices.md`
+- `docs/informes/informe_etapa5_explain.md`
+- `docs/informes/informe_etapa6_api.md`
+- `docs/informes/informe_etapa7_front.md`
 
 ---
 

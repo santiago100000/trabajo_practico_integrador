@@ -3,13 +3,13 @@
 ## Estado general del repositorio
 
 **Rama:** `main`  
-**Último commit:** `5d9e647` (Informe etapa 5 reescrito en español + progreso actualizado)  
+**Último commit:** `b6d60ef` (Front: criterios de aceptación 4, 5, 6 cumplidos)  
 **Push a `origin/main`:** ✅ Sincronizado  
 **Última actualización:** 07/11/2026  
 
-**Etapas completadas:** 1, 2, 3, 4, 5, 6  
+**Etapas completadas:** 1, 2, 3, 4, 5, 6, 7  
 **Etapa en curso:** ninguna  
-**Etapas pendientes:** 7, 9 (etapa 8 de despliegue en la nube descartada)  
+**Etapas pendientes:** 9 (etapa 8 de despliegue en la nube descartada)  
 
 ---
 
@@ -241,7 +241,7 @@
 - Migraciones 001-008 aplicadas sin errores
 - Rol `app_rw` conecta correctamente con privilegios mínimos
 
-**Commit y push:** `ee1272e` (README), `cf49de2` (informe etapa 6), `08e277e` (fix puertos 8001 en docker-compose, index.js y Dockerfile) — Push a `origin/main` ✅
+**Commit y push:** `ee1272e` (README), `cf49de2` (informe etapa 6), `08e277e` (fix puertos 8001), `74d217f` (front con 5 pantallas y capa API), `b6d60ef` (front: criterios 4, 5, 6) — Push a `origin/main` ✅
 
 **Criterios de aceptación Etapa 6:**
 - API REST funcionando en local con Docker Compose ✅
@@ -249,6 +249,36 @@
 - Traduce errores SQL a códigos HTTP claros ✅
 - Conecta con rol de privilegios mínimos (app_rw) ✅
 - Consultas SQL parametrizadas (sin inyección SQL) ✅
+
+---
+
+## Etapa 7: Frontend — COMPLETADA ✅
+
+**Fecha:** 07/11/2026
+
+### Implementado
+- 5 pantallas en `front/`:
+  - `index.html` — Dashboard / Inicio
+  - `vinos.html` — Catálogo de vinos con filtros
+  - `ventas.html` — Nueva venta / comprobantes
+  - `clientes.html` — Listado de clientes
+  - `reportes.html` — Reportes (top vinos, ventas por sala, sin stock, trazabilidad)
+- Capa de servicios centralizada:
+  - `front/js/config.js` — URL base de la API configurable (`API_BASE_URL`)
+  - `front/js/api.js` — Todas las llamadas a la API REST (`fetch`, parámetros `$1`, `$2`)
+- Estilos: `front/css/style.css`
+- Servicio `front` en `docker-compose.yml` (nginx, puerto 8081)
+
+### Criterios de aceptación cumplidos
+| Criterio | Estado |
+|----------|--------|
+| Las 5 pantallas funcionan contra la API real (localhost:8001) | ✅ |
+| Venta sin stock muestra mensaje de la regla y no deja datos a medias (ROLLBACK en BD) | ✅ |
+| El front NO contiene lógica de cálculo de importes, descuentos ni stock (la BD lo hace vía triggers RN-08/RN-09) | ✅ |
+| Mensajes de error de reglas de negocio mostrados tal como los devuelve la API (sin ocultar ni reemplazar por genéricos) | ✅ |
+| Front incluido en docker-compose.yml (servicio `front`, nginx, puerto 8081) | ✅ |
+
+**Commit y push:** `b6d60ef` — Push a `origin/main` ✅
 
 ---
 
@@ -271,5 +301,4 @@
 
 ## Próximos pasos sugeridos (cuando se decida continuar)
 
-1. Etapa 7: Frontend con nginx
-2. Etapa 9: Documentación y defensa (etapa 8 de despliegue en la nube descartada)
+1. Etapa 9: Documentación y defensa (etapa 8 de despliegue en la nube descartada)

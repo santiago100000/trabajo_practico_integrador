@@ -52,6 +52,7 @@ Esto levanta tres servicios:
 | `db` | PostgreSQL 16 (base de datos) | `127.0.0.1:5433` |
 | `migrate` | Aplica las migraciones SQL en orden (`db/migrations/001` a `008`) y termina | — |
 | `api` | API REST de Node.js/Express | `http://localhost:8001` |
+| `front` | Frontend estático con nginx | `http://localhost:8081` |
 
 ### 3. Verificar que la API está funcionando
 
@@ -64,7 +65,15 @@ Respuesta esperada:
 {"status":"ok","db":{"resultado":1}}
 ```
 
-### 4. Cargar datos de prueba (opcional pero recomendado)
+### 4. Abrir el frontend
+
+El frontend está disponible en:
+
+```
+http://localhost:8081
+```
+
+### 5. Cargar datos de prueba (opcional pero recomendado)
 
 Para probar con datos masivos (20.000 clientes, 150.000 comprobantes, 500.000+ renglones):
 

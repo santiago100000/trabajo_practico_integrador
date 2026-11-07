@@ -1,5 +1,5 @@
 const express = require('express');
-const errorHandler = require('./middlewares/errorHandler');
+const errorHandler = require('../middlewares/errorHandler');
 
 const saludRoutes = require('./routes/saludRoutes');
 const vinosRoutes = require('./routes/vinosRoutes');

@@ -3,14 +3,14 @@ services:
     build: ./api
     container_name: bodegas_api
     ports:
-      - "127.0.0.1:8001:8001"
+      - "127.0.0.1:3000:3000"
     environment:
       DB_HOST: db
       DB_PORT: 5432
       DB_USER: app_rw
       DB_PASSWORD: ${APP_DB_PASSWORD}
       DB_NAME: ${POSTGRES_DB}
-      PORT: 8001
+      PORT: 3000
     depends_on:
       db:
         condition: service_healthy

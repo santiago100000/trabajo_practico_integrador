@@ -240,6 +240,7 @@
 - `curl http://localhost:8001/salud` responde `{"status":"ok","db":{"resultado":1}}`
 - Migraciones 001-008 aplicadas sin errores
 - Rol `app_rw` conecta correctamente con privilegios mínimos
+- CORS habilitado en la API (`cors` middleware) para permitir peticiones del frontend desde `http://localhost:8081`
 
 **Commit y push:** `ee1272e` (README), `cf49de2` (informe etapa 6), `08e277e` (fix puertos 8001), `74d217f` (front con 5 pantallas y capa API), `b6d60ef` (front: criterios 4, 5, 6) — Push a `origin/main` ✅
 

@@ -1,6 +1,6 @@
 const app = require('./app');
 
-const PORT = parseInt(process.env.PORT, 10) || 3000;
+const PORT = parseInt(process.env.PORT || process.env.API_PORT, 10) || 8001;
 
 const server = app.listen(PORT, () => {
   console.log(`API Bodegas del Atuel escuchando en puerto ${PORT}`);

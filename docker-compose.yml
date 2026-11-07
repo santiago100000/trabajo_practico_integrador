@@ -3,21 +3,21 @@ services:
     build: ./api
     container_name: bodegas_api
     ports:
-      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:8001:8001"
     environment:
       DB_HOST: db
       DB_PORT: 5432
       DB_USER: app_rw
       DB_PASSWORD: ${APP_DB_PASSWORD}
       DB_NAME: ${POSTGRES_DB}
-      PORT: 3000
+      PORT: 8001
     depends_on:
       db:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"require('http').get({host:'127.0.0.1',port:3000,path:'/salud',timeout:2000},r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      test: ["CMD-SHELL", "node -e \"require('http').get({host:'127.0.0.1',port:8001,path:'/salud',timeout:2000},r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
       interval: 10s
       timeout: 5s
       retries: 10

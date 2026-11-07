@@ -78,10 +78,16 @@ http://localhost:8081
 Para probar con datos masivos (20.000 clientes, 150.000 comprobantes, 500.000+ renglones):
 
 ```bash
-docker compose --profile seed run --rm seed
+# Cargar datos masivos con semilla fija (reproducible)
+docker compose --profile seed run --rm seed python seed.py --masivo
+
+# O con volúmenes personalizados
+docker compose --profile seed run --rm seed python seed.py --masivo --clientes 30000 --comprobantes 200000
 ```
 
-Esto ejecuta `db/seed/seed.py` con semilla fija (reproducible) y genera un volcado `dump_completo.sql.gz`.
+Esto ejecuta `db/seed/seed.py` con semilla fija (42 por defecto), carga catálogos desde CSV, genera datos masivos con Faker, deshabilita/rehabilita triggers durante la carga, recalcula totales y stock, y genera un volcado `dump_completo.sql.gz`.
+
+> **Nota:** El servicio `seed` espera a que las migraciones terminen (`migrate`) antes de ejecutarse. Si cambias contraseñas en `.env`, asegúrate de que `POSTGRES_PASSWORD` y `OWNER_DB_PASSWORD` coincidan para que el seed pueda autenticarse como `bodegas_owner`.
 
 ---
 

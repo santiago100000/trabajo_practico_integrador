@@ -71,7 +71,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${OWNER_DB_PASSWORD}
       DB_HOST: db
       DB_PORT: 5432
       SEED: ${SEED:-42}
@@ -80,6 +80,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
   front:
     image: nginx:alpine

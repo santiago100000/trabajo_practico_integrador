@@ -3,7 +3,7 @@
 ## Estado general del repositorio
 
 **Rama:** `main`  
-**Último commit:** `cf49de2` (Informe de la etapa 6 - API REST)  
+**Último commit:** `5d9e647` (Informe etapa 5 reescrito en español + progreso actualizado)  
 **Push a `origin/main`:** ✅ Sincronizado  
 **Última actualización:** 07/11/2026  
 
@@ -241,7 +241,7 @@
 - Migraciones 001-008 aplicadas sin errores
 - Rol `app_rw` conecta correctamente con privilegios mínimos
 
-**Commit y push:** `ee1272e` (README) y `cf49de2` (informe etapa 6) — Push a `origin/main` ✅
+**Commit y push:** `ee1272e` (README), `cf49de2` (informe etapa 6), `08e277e` (fix puertos 8001 en docker-compose, index.js y Dockerfile) — Push a `origin/main` ✅
 
 **Criterios de aceptación Etapa 6:**
 - API REST funcionando en local con Docker Compose ✅
@@ -255,7 +255,7 @@
 ## Cambios estructurales realizados
 
 - `docker-compose.yml`: servicios `db`, `migrate` y `seed` (profile `seed`)
-- `README.md`: hitos actualizados hasta H5, decisiones corregidas (migraciones con DDL real, no stubs), despliegue en nube marcado como pendiente
+- `README.md`: hitos actualizados hasta H6, integrantes reales (Puita Axel, Cerda Santiago, Serpa Juan Cruz), roles rotativos, instrucciones de lanzamiento y uso de la API, decisiones corregidas (migraciones con DDL real, no stubs), despliegue en nube descartado
 - `CARPETA TEMPORAL/`: `progreso.md` y documentos de referencia trackeados en el repo
 - `.gitignore`: ignora `/CARPETA TEMPORAL/` excepto `progreso.md`, `DOCKER_VARIABLES_PUERTOS_REDES.md`, `explicacion.md`, `reglas_del_proyecto_bodegas_del_atuel.txt`, `TPI_Bodegas_del_Atuel.md`
 
@@ -266,7 +266,7 @@
 - `docs/informes/informe_etapa2_integridad.md` — Constraints, funciones, procedimientos, triggers, vistas, roles, pruebas.
 - `docs/informes/informe_etapa3_carga_masiva.md` — Catálogos CSV, orden de carga FK, carga masiva Faker, triggers, consultas de control.
 - `docs/informes/informe_etapa4_indices.md` — Índices y rendimiento (pasos 1 a 8 con resultados reales EXPLAIN).
-- `docs/informes/informe_etapa5_explain.md` — Planes EXPLAIN para consultas S1 a S12.
+- `docs/informes/informe_etapa5_explain.md` — Planes EXPLAIN para consultas S1 a S12 (reescrito en español con formato consistente a los demás informes).
 - `docs/informes/informe_etapa6_api.md` — API REST: arquitectura, endpoints, tests, despliegue Docker.
 
 ## Próximos pasos sugeridos (cuando se decida continuar)

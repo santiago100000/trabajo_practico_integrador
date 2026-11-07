@@ -51,21 +51,6 @@
             <!-- Se llenan dinámicamente -->
           </div>
 
-          <div class="resumen-venta" style="margin-top: 1rem; padding: 1rem; background: #F3EFEA; border-radius: var(--radius);">
-            <div style="display: flex; justify-content: space-between; font-size: 0.95rem;">
-              <span>Subtotal:</span>
-              <span id="res-subtotal">$0.00</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 0.95rem;">
-              <span>Descuento:</span>
-              <span id="res-descuento">$0.00</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 700; color: var(--color-primary); margin-top: 0.5rem;">
-              <span>TOTAL:</span>
-              <span id="res-total">$0.00</span>
-            </div>
-          </div>
-
           <div class="form-actions" style="margin-top: 1.5rem;">
             <button type="button" id="btn-cancelar" class="btn btn-outline">Cancelar</button>
             <button type="submit" id="btn-guardar" class="btn btn-success">Generar Comprobante</button>
@@ -83,9 +68,6 @@
       const selectSala = document.getElementById('sala');
       const renglonesContainer = document.getElementById('renglones-container');
       const btnAgregar = document.getElementById('btn-agregar-renglon');
-      const resSubtotal = document.getElementById('res-subtotal');
-      const resDescuento = document.getElementById('res-descuento');
-      const resTotal = document.getElementById('res-total');
       const btnGuardar = document.getElementById('btn-guardar');
 
       let renglones = [];
@@ -106,35 +88,13 @@
         return '$' + Number(valor || 0).toLocaleString('es-AR', {minimumFractionDigits: 2});
       }
 
-      function calcularResumenLocal() {
-        // SOLO para mostrar al usuario un estimado visual.
-        // Los valores oficiales los calcula la BD vía triggers (RN-08).
-        // El front NO guarda ni envía estos cálculos como definitivos.
-        let subtotal = 0;
-        let descuento = 0;
-        renglones.forEach(r => {
-          const descuentoRenglon = r.cantidad * r.precio_unitario * (r.descuento_aplicado / 100);
-          const subtotalRenglon = r.cantidad * r.precio_unitario - descuentoRenglon;
-          subtotal += subtotalRenglon;
-          descuento += descuentoRenglon;
-        });
-        const total = subtotal; // La BD recalculará el descuento real del cliente
-
-        resSubtotal.textContent = formatoMoneda(subtotal);
-        resDescuento.textContent = formatoMoneda(descuento);
-        resTotal.textContent = formatoMoneda(total);
-      }
-
       function renderizarRenglones() {
         if (renglones.length === 0) {
           renglonesContainer.innerHTML = '<div class="empty-state" style="padding:1rem;"><p>No hay vinos agregados. Haz clic en "+ Agregar Vino".</p></div>';
-          calcularResumenLocal();
           return;
         }
 
         const filas = renglones.map((r, idx) => {
-          const descuentoRenglon = r.cantidad * r.precio_unitario * (r.descuento_aplicado / 100);
-          const subtotalRenglon = r.cantidad * r.precio_unitario - descuentoRenglon;
           return `
             <tr style="display:table;width:100%;margin-bottom:0.5rem;">
               <td style="padding:0.5rem 1rem;display:table-cell;">
@@ -148,7 +108,7 @@
                 ${r.descuento_aplicado}%
               </td>
               <td style="padding:0.5rem 1rem;display:table-cell; font-weight:600;">
-                ${formatoMoneda(subtotalRenglon)}
+                ${formatoMoneda(r.precio_unitario * r.cantidad)}
               </td>
               <td style="padding:0.5rem 1rem;display:table-cell; text-align:right;">
                 <button type="button" data-idx="${idx}" class="btn btn-danger btn-small" onclick="eliminarRenglon(${idx})">×</button>
@@ -178,12 +138,9 @@
             const idx = parseInt(e.target.dataset.idx);
             const nuevo = parseInt(e.target.value) || 1;
             renglones[idx].cantidad = Math.max(1, nuevo);
-            calcularResumenLocal();
             renderizarRenglones();
           });
         });
-
-        calcularResumenLocal();
       }
 
       window.eliminarRenglon = (idx) => {
@@ -306,10 +263,8 @@
           }, 1500);
         } catch (err) {
           console.error('Error creando comprobante:', err);
-          // Criterio de aceptación: mostrar mensaje de regla de negocio y no dejar datos a medias
-          const msg = err.codigo === 'PLPGSQL_RAISE' || err.codigo === 'CHECK_VIOLATED'
-            ? `Regla de negocio: ${err.mensaje || err.message}`
-            : `Error: ${err.mensaje || err.message}`;
+          // Criterio de aceptación: mostrar el mensaje de la API tal cual, sin ocultarlo ni reemplazarlo por uno genérico
+          const msg = err.mensaje || err.message || 'Error inesperado';
           mostrarAlerta('error', msg);
         } finally {
           btnGuardar.disabled = false;

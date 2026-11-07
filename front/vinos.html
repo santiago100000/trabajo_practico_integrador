@@ -10,7 +10,7 @@
 </head>
 <body>
   <header>
-    <h1>🍷 Vinos</h1>
+    <h1>Vinos</h1>
     <div class="header-actions">
       <a href="index.html" class="btn btn-outline">← Volver</a>
       <a href="ventas.html" class="btn btn-success">Nueva Venta</a>
@@ -60,11 +60,11 @@
       const filtroTipo = document.getElementById('filtro-tipo');
       const btnAplicar = document.getElementById('btn-aplicar-filtros');
 
+      let paginaActual = 1;
+
       function mostrarAlerta(tipo, mensaje) {
         alertArea.innerHTML = `<div class="alert alert-${tipo}">${mensaje}</div>`;
       }
-
-      let paginaActual = 1;
 
       async function cargarVinos() {
         const params = {
@@ -91,7 +91,6 @@
 
         if (lblPag) lblPag.textContent = `Página ${paginaActual}`;
         if (btnAnt) btnAnt.disabled = paginaActual <= 1;
-        // Si vinieron menos filas que el límite, asumimos que es la última página
         if (btnSig) btnSig.disabled = cantidad < 10;
       }
 
@@ -147,7 +146,6 @@
       document.getElementById('btn-pagina-anterior').addEventListener('click', paginaAnterior);
       document.getElementById('btn-pagina-siguiente').addEventListener('click', paginaSiguiente);
 
-      // Cargar al iniciar
       cargarVinos();
     })();
   </script>

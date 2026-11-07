@@ -10,23 +10,18 @@
 </head>
 <body>
   <header>
-    <h1>👥 Clientes</h1>
+    <h1>Clientes</h1>
     <div class="header-actions">
       <a href="index.html" class="btn btn-outline">← Volver</a>
     </div>
   </header>
 
   <div class="main">
-    <div class="page-title">
-      <span>👥</span> Gestión de Clientes
-    </div>
-
     <div id="alert-area"></div>
 
-    <!-- Formulario de alta de cliente -->
     <div class="card">
       <div class="card-header">
-        <h2>➕ Alta de Cliente</h2>
+        <h2>Alta de Cliente</h2>
       </div>
       <form id="form-cliente">
         <div class="form-grid">
@@ -188,11 +183,9 @@
         }
       }
 
-      // Formulario de alta de cliente
       const formCliente = document.getElementById('form-cliente');
       const btnLimpiarCliente = document.getElementById('btn-limpiar-cliente');
 
-      // Establecer fecha de alta por defecto (hoy)
       const fechaHoy = new Date().toISOString().split('T')[0];
       document.getElementById('cli-fecha-alta').value = fechaHoy;
 
@@ -231,6 +224,7 @@
           await API.crearCliente(data);
           mostrarAlerta('success', 'Cliente creado correctamente.');
           formCliente.reset();
+          document.getElementById('cli-fecha-alta').value = fechaHoy;
           cargarClientes();
         } catch (err) {
           mostrarAlerta('error', err.mensaje || err.message || 'Error creando cliente');

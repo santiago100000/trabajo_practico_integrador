@@ -10,10 +10,10 @@
 </head>
 <body>
   <header>
-    <h1>🍷 Bodegas del Atuel</h1>
+    <h1>Bodegas del Atuel</h1>
     <div class="header-actions">
-      <a href="vinos.html" class="btn btn-primary">Vinos</a>
-      <a href="clientes.html" class="btn btn-primary">Clientes</a>
+      <a href="vinos.html" class="btn btn-outline">Vinos</a>
+      <a href="clientes.html" class="btn btn-outline">Clientes</a>
       <a href="ventas.html" class="btn btn-success">Nueva Venta</a>
       <a href="reportes.html" class="btn btn-outline">Reportes</a>
     </div>
@@ -24,17 +24,15 @@
       <span>📊</span> Dashboard
     </div>
 
-    <!-- Alerta de estado de la API -->
     <div id="alert-area"></div>
 
-    <!-- Métricas rápidas -->
     <div class="metrics" id="metrics-container">
       <!-- Se llenan por JS -->
     </div>
 
     <div class="card">
       <div class="card-header">
-        <h2>🏆 Top 5 Vinos Más Vendidos</h2>
+        <h2>Top Vinos Más Vendidos</h2>
         <a href="vinos.html" class="btn btn-small btn-outline">Ver todos los vinos</a>
       </div>
       <div id="top-vinos-container">
@@ -44,7 +42,7 @@
 
     <div class="card">
       <div class="card-header">
-        <h2>📋 Acciones Rápidas</h2>
+        <h2>Acciones Rápidas</h2>
       </div>
       <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
         <a href="vinos.html" class="btn btn-primary">Gestionar Vinos</a>
@@ -68,15 +66,11 @@
       }
 
       try {
-        // Verificar salud de la API
         const salud = await API.salud();
         console.log('API conectada:', salud);
 
-        // Métricas (simuladas con datos de ejemplo ya que la API real no tiene endpoint de conteo global)
-        // Las obtenemos de los reportes disponibles
         const topVinos = await API.reporteTopVinos();
 
-        // Renderizar métricas
         metricsContainer.innerHTML = `
           <div class="metric">
             <div class="label">Vinos en catálogo</div>
@@ -96,7 +90,6 @@
           </div>
         `;
 
-        // Renderizar top vinos
         if (topVinos.length === 0) {
           topVinosContainer.innerHTML = '<div class="empty-state"><h3>Sin datos de ventas aún</h3><p>Registra la primera venta para ver el ranking.</p></div>';
         } else {

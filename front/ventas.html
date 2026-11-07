@@ -10,7 +10,7 @@
 </head>
 <body>
   <header>
-    <h1>💰 Nueva Venta</h1>
+    <h1>Nueva Venta</h1>
     <div class="header-actions">
       <a href="index.html" class="btn btn-outline">← Volver</a>
       <a href="vinos.html" class="btn btn-outline">Ver Vinos</a>
@@ -43,8 +43,8 @@
 
         <div class="card" style="margin-top: 1.5rem;">
           <div class="card-header">
-            <h2>🍷 Renglones de Venta</h2>
-            <select id="select-vino-renglon" style="padding:0.6rem 0.8rem;border:1.5px solid var(--color-border);border-radius:var(--radius);font-size:0.9rem;">
+            <h2>Renglones de Venta</h2>
+            <select id="select-vino-renglon" class="select-wine">
               <option value="">Seleccionar vino...</option>
             </select>
             <button type="button" id="btn-agregar-renglon" class="btn btn-primary btn-small">+ Agregar Vino</button>
@@ -135,7 +135,6 @@
           </table>
         `;
 
-        // Asignar eventos a inputs de cantidad
         document.querySelectorAll('.input-cantidad').forEach(input => {
           input.addEventListener('change', (e) => {
             const idx = parseInt(e.target.dataset.idx);
@@ -163,19 +162,16 @@
           salas = salasResp;
           vinosDisponibles = vinosResp;
 
-          // Llenar select de clientes
           selectCliente.innerHTML = clientes.map(c => `
             <option value="${c.id_cliente}" data-tipo="${c.tipo_cliente}" data-descuento="${c.descuento}">
               ${c.nombre_razon_social} (${c.tipo_cliente}, ${c.descuento}% dto.)
             </option>
           `).join('');
 
-          // Llenar select de salas (desde la API real)
           selectSala.innerHTML = salas.map(s => `
             <option value="${s.id_sala}">${s.calle} ${s.numero}, ${s.localidad}</option>
           `).join('');
 
-          // Llenar select de vinos para agregar al renglón
           const selectVino = document.getElementById('select-vino-renglon');
           selectVino.innerHTML = '<option value="">Seleccionar vino...</option>' + vinos.map(v => `
             <option value="${v.cod_vino}">${v.nombre} (${v.tipo}, ${v.anada}) - $${Number(v.precio).toLocaleString('es-AR', {minimumFractionDigits:2})}</option>
@@ -213,7 +209,6 @@
           return;
         }
 
-        // Verificar si ya está agregado
         const existe = renglones.find(r => r.cod_vino === vino.cod_vino);
         if (existe) {
           existe.cantidad += 1;
@@ -237,16 +232,13 @@
         limpiarAlerta();
 
         if (renglones.length === 0) {
-          mostrarAlerta('warning', 'Debes agregar al menos un vino a la venta.');
+          mostrarAlerta('warning', 'Debés agregar al menos un vino a la venta.');
           return;
         }
 
         const idCliente = parseInt(selectCliente.value);
         const idSala = parseInt(selectSala.value);
 
-        // Construir payload para la API.
-        // IMPORTANTE: El front NO envía subtotal, descuento ni total calculados.
-        // La BD los calcula vía triggers (RN-08). Solo enviamos lo necesario.
         const payload = {
           id_cliente: idCliente,
           id_sala: idSala,
@@ -255,7 +247,6 @@
             cantidad: r.cantidad,
             precio_unitario: r.precio_unitario,
             descuento_aplicado: r.descuento_aplicado
-            // subtotal se omite: lo calcula el trigger en la BD
           }))
         };
 
@@ -270,7 +261,6 @@
           }, 1500);
         } catch (err) {
           console.error('Error creando comprobante:', err);
-          // Criterio de aceptación: mostrar el mensaje de la API tal cual, sin ocultarlo ni reemplazarlo por uno genérico
           const msg = err.mensaje || err.message || 'Error inesperado';
           mostrarAlerta('error', msg);
         } finally {
@@ -286,7 +276,6 @@
         }
       });
 
-      // Inicializar
       cargarDatosIniciales();
     })();
   </script>

@@ -10,7 +10,7 @@
 </head>
 <body>
   <header>
-    <h1>📈 Reportes</h1>
+    <h1>Reportes</h1>
     <div class="header-actions">
       <a href="index.html" class="btn btn-outline">← Volver</a>
     </div>
@@ -23,30 +23,27 @@
 
     <div id="alert-area"></div>
 
-    <!-- Reporte 1: Top vinos -->
     <div class="card">
       <div class="card-header">
-        <h2>🏆 Top 10 Vinos Más Vendidos</h2>
+        <h2>Top 10 Vinos Más Vendidos</h2>
       </div>
       <div id="top-vinos-container">
         <!-- Se llena por JS -->
       </div>
     </div>
 
-    <!-- Reporte 2: Ventas por sala -->
     <div class="card">
       <div class="card-header">
-        <h2>💰 Ventas por Sala (Último Trimestre)</h2>
+        <h2>Ventas por Sala (Último Trimestre)</h2>
       </div>
       <div id="ventas-sala-container">
         <!-- Se llena por JS -->
       </div>
     </div>
 
-    <!-- Reporte 3: Vinos sin stock -->
     <div class="card">
       <div class="card-header">
-        <h2>📦 Vinos sin Stock en Sala (con stock en depósito)</h2>
+        <h2>Vinos sin Stock en Sala (con stock en depósito)</h2>
         <div style="display:flex; align-items:center; gap:1rem;">
           <label for="sala-reporte">Sala:</label>
           <select id="sala-reporte">
@@ -60,10 +57,9 @@
       </div>
     </div>
 
-    <!-- Reporte 4: Trazabilidad -->
     <div class="card">
       <div class="card-header">
-        <h2>🔍 Trazabilidad de Vino</h2>
+        <h2>Trazabilidad de Vino</h2>
       </div>
       <form id="form-trazabilidad" style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
         <input type="number" id="cod-vino-trazabilidad" placeholder="Código de vino" min="1" style="padding:0.6rem 0.8rem;border:1.5px solid var(--color-border);border-radius:var(--radius);">
@@ -91,7 +87,6 @@
         return '$' + Number(valor || 0).toLocaleString('es-AR', {minimumFractionDigits: 2});
       }
 
-      // --- Top vinos ---
       async function cargarTopVinos() {
         try {
           const vinos = await API.reporteTopVinos();
@@ -123,7 +118,6 @@
         }
       }
 
-      // --- Ventas por sala ---
       async function cargarVentasSala() {
         try {
           const datos = await API.reporteVentasPorSala();
@@ -153,7 +147,6 @@
         }
       }
 
-      // --- Vinos sin stock ---
       async function cargarVinosSinStock(idSala) {
         try {
           const datos = await API.reporteVinosSinStock(idSala);
@@ -184,7 +177,6 @@
         }
       }
 
-      // --- Salas dinámicas para reporte de sin stock ---
       async function cargarSalasReporte() {
         try {
           const salas = await API.listarSalas();
@@ -208,7 +200,6 @@
         cargarVinosSinStock(idSala);
       });
 
-      // --- Trazabilidad ---
       const formTrazabilidad = document.getElementById('form-trazabilidad');
       const trazabilidadContainer = document.getElementById('trazabilidad-container');
 
@@ -233,7 +224,7 @@
                 <p><strong>Maridajes:</strong> ${vino.maridajes || 'No registrados'}</p>
               </div>
               <div style="flex:1;">
-                <h3>📦 Stock</h3>
+                <h3>Stock</h3>
                 <p><strong>Total:</strong> ${vino.stock_total || 0}</p>
               </div>
             </div>
@@ -244,7 +235,6 @@
         }
       });
 
-      // Cargar todo al iniciar
       async function init() {
         await cargarSalasReporte();
         cargarTopVinos();

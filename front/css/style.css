@@ -1,6 +1,7 @@
 /* ============================================================================
    Bodegas del Atuel — Frontend (Etapa 7)
-   Estilos base para las 5 pantallas
+   Diseño minimalista, serio y tecnológico
+   Paleta: tonos de vino (burdeos, granate, oro)
    ============================================================================ */
 * {
   box-sizing: border-box;
@@ -9,29 +10,38 @@
 }
 
 :root {
-  --color-primary: #722F37;      /* Burdeos vino */
-  --color-primary-dark: #4A1E24;
-  --color-secondary: #D4A373;    /* Oro suave */
-  --color-bg: #F5F5F0;
-  --color-surface: #FFFFFF;
-  --color-text: #2B2B2B;
-  --color-text-muted: #6B6B6B;
-  --color-border: #DDD6D0;
+  /* Tonos de vino */
+  --color-wine: #722F37;        /* Burdeos principal */
+  --color-wine-dark: #4A1E24;   /* Burdeos oscuro */
+  --color-wine-light: #A33B48;  /* Burdeos claro */
+  --color-gold: #B8860B;        /* Oro vino */
+  --color-gold-light: #D4A373;  /* Oro suave */
+
+  /* Neutros tecnológicos */
+  --color-bg: #F7F5F4;          /* Fondo cálido muy claro */
+  --color-surface: #FFFFFF;     /* Superficie blanca */
+  --color-text: #1A1A1A;        /* Texto principal casi negro */
+  --color-text-muted: #6B6B6B;  /* Texto secundario */
+  --color-border: #D9D3D1;      /* Bordes suaves */
+  --color-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  --color-shadow-hover: 0 4px 12px rgba(0,0,0,0.10);
+
   --color-success: #2E7D32;
-  --color-danger: #C62828;
-  --color-warning: #F57C00;
-  --color-info: #1565C0;
-  --shadow: 0 2px 8px rgba(0,0,0,0.08);
-  --shadow-hover: 0 4px 16px rgba(0,0,0,0.12);
-  --radius: 8px;
+  --color-danger: #722F37;
+  --color-warning: #B8860B;
+  --color-info: #1A3A5C;
+
+  --radius: 6px;
+  --transition: all 0.2s ease;
 }
 
 html, body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   background: var(--color-bg);
   color: var(--color-text);
-  line-height: 1.5;
+  line-height: 1.6;
   height: 100%;
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
@@ -41,47 +51,52 @@ body {
 
 /* ---------- Header ---------- */
 header {
-  background: var(--color-primary);
+  background: var(--color-wine-dark);
   color: #fff;
-  padding: 1rem 2rem;
+  padding: 1.25rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: var(--shadow);
+  box-shadow: var(--color-shadow);
 }
 
 header h1 {
-  font-size: 1.5rem;
-  letter-spacing: 0.5px;
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
 }
 
 .header-actions {
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .btn {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.6rem 1.2rem;
+  padding: 0.55rem 1.1rem;
   border: none;
   border-radius: var(--radius);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--transition);
   text-decoration: none;
 }
 
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .btn-primary {
-  background: var(--color-secondary);
-  color: var(--color-primary-dark);
+  background: var(--color-wine);
+  color: #fff;
 }
 
 .btn-primary:hover {
-  background: #e8b980;
-  transform: translateY(-1px);
+  background: var(--color-wine-dark);
 }
 
 .btn-success {
@@ -90,7 +105,7 @@ header h1 {
 }
 
 .btn-success:hover {
-  background: #1b5e20;
+  background: #1B5E20;
 }
 
 .btn-danger {
@@ -99,23 +114,23 @@ header h1 {
 }
 
 .btn-danger:hover {
-  background: #b71c1c;
+  background: #4A1E24;
 }
 
 .btn-outline {
   background: transparent;
-  color: var(--color-primary);
-  border: 1.5px solid var(--color-primary);
+  color: var(--color-wine);
+  border: 1.5px solid var(--color-wine);
 }
 
 .btn-outline:hover {
-  background: var(--color-primary);
+  background: var(--color-wine);
   color: #fff;
 }
 
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.btn-small {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
 }
 
 /* ---------- Layout ---------- */
@@ -128,114 +143,103 @@ header h1 {
 }
 
 .page-title {
-  font-size: 1.75rem;
-  margin-bottom: 1.5rem;
-  color: var(--color-primary);
+  font-size: 1.5rem;
+  margin-bottom: 2rem;
+  color: var(--color-wine-dark);
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
 
-.page-subtitle {
-  color: var(--color-text-muted);
-  margin-bottom: 1.5rem;
-}
-
-/* ---------- Tarjetas (cards) ---------- */
+/* ---------- Tarjetas ---------- */
 .card {
   background: var(--color-surface);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
+  box-shadow: var(--color-shadow);
+  padding: 1.75rem;
+  margin-bottom: 1.75rem;
+  border: 1px solid var(--color-border);
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
-  border-bottom: 2px solid var(--color-border);
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--color-border);
   padding-bottom: 0.75rem;
 }
 
 .card h2 {
-  font-size: 1.25rem;
-  color: var(--color-primary);
+  font-size: 1.15rem;
+  color: var(--color-wine-dark);
+  font-weight: 600;
 }
 
 /* ---------- Tablas ---------- */
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 table th,
 table td {
-  padding: 0.85rem 1rem;
+  padding: 0.8rem 1rem;
   text-align: left;
   border-bottom: 1px solid var(--color-border);
 }
 
 table th {
-  background: #F3EFEA;
+  background: #F3F1F0;
   color: var(--color-text-muted);
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
 }
 
 table tr:hover {
-  background: #FAF9F6;
-}
-
-.btn-small {
-  padding: 0.4rem 0.8rem;
-  font-size: 0.85rem;
+  background: #FAF9F8;
 }
 
 /* ---------- Formularios ---------- */
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.25rem;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.5rem;
 }
 
 .form-group label {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 .form-group input,
 .form-group select,
 .form-group textarea {
-  padding: 0.6rem 0.8rem;
+  padding: 0.7rem 0.9rem;
   border: 1.5px solid var(--color-border);
   border-radius: var(--radius);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   background: #fff;
+  transition: var(--transition);
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: var(--color-primary);
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
+  border-color: var(--color-wine);
 }
 
 .form-actions {
@@ -244,63 +248,66 @@ table tr:hover {
   margin-top: 1.5rem;
 }
 
-/* ---------- Métricas (resumen rápido) ---------- */
+/* ---------- Métricas ---------- */
 .metrics {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.75rem;
 }
 
 .metric {
   background: var(--color-surface);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 1.25rem 1.5rem;
-  display: flex;
-  flex-direction: column;
+  box-shadow: var(--color-shadow);
+  padding: 1.5rem;
+  border: 1px solid var(--color-border);
 }
 
 .metric .label {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 0.4rem;
+  letter-spacing: 0.4px;
+  margin-bottom: 0.5rem;
 }
 
 .metric .value {
-  font-size: 1.75rem;
+  font-size: 1.8rem;
   font-weight: 700;
-  color: var(--color-primary);
+  color: var(--color-wine);
 }
 
 /* ---------- Alertas ---------- */
+#alert-area {
+  margin-bottom: 1.5rem;
+}
+
 .alert {
   padding: 1rem 1.25rem;
   border-radius: var(--radius);
   margin-bottom: 1.25rem;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
 
 .alert-error {
-  background: #FDECEA;
-  border: 1px solid #F5C6C7;
+  background: #FBEAEA;
+  border: 1px solid #D9B3B3;
   color: var(--color-danger);
 }
 
 .alert-success {
-  background: #E7F4EA;
-  border: 1px solid #B9E2C7;
+  background: #EAF3EC;
+  border: 1px solid #B3D9C2;
   color: var(--color-success);
 }
 
 .alert-info {
-  background: #E3F2FD;
-  border: 1px solid #BBDEFB;
+  background: #E9F0F7;
+  border: 1px solid #B3CFE2;
   color: var(--color-info);
 }
 
@@ -317,24 +324,28 @@ table tr:hover {
   margin-top: 1.5rem;
 }
 
-.pagination a,
+.pagination-btn,
 .pagination span {
-  padding: 0.5rem 0.9rem;
+  padding: 0.55rem 0.95rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   text-decoration: none;
   color: var(--color-text);
   font-size: 0.9rem;
+  background: #fff;
+  cursor: pointer;
+  transition: var(--transition);
 }
 
-.pagination a:hover {
-  background: #F3EFEA;
+.pagination-btn:hover {
+  background: #F3F1F0;
+  border-color: var(--color-wine);
 }
 
 .pagination .current {
-  background: var(--color-primary);
+  background: var(--color-wine);
   color: #fff;
-  border-color: var(--color-primary);
+  border-color: var(--color-wine);
 }
 
 /* ---------- Estado vacío ---------- */
@@ -347,6 +358,15 @@ table tr:hover {
 .empty-state h3 {
   margin-bottom: 0.5rem;
   color: var(--color-text);
+}
+
+/* ---------- Select de vino en ventas ---------- */
+.select-wine {
+  padding: 0.7rem 0.9rem;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  background: #fff;
 }
 
 /* ---------- Responsive ---------- */

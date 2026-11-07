@@ -3,7 +3,7 @@
 ## Estado general del repositorio
 
 **Rama:** `main`  
-**Último commit:** `04f4791` (fix(etapa7): corregir creación de clientes desde el front)  
+**Último commit:** `82d6e3b` (design(front): rediseño minimalista, serio y tecnológico con paleta de vinos)  
 **Push a `origin/main`:** ✅ Sincronizado  
 **Última actualización:** 07/11/2026  
 
@@ -288,6 +288,14 @@
 - `api/src/routes/salasRoutes.js` — Ruta `GET /salas`
 - `db/migrations/005_triggers.sql` — Trigger coherencia → DEFERRABLE
 
+### Rediseño visual (Etapa 7)
+Se rediseñó el frontend con un estilo minimalista, serio y tecnológico:
+- Paleta basada en tonos de vino (burdeos #722F37, oro #B8860B, neutros cálidos)
+- Eliminados emojis innecesarios para aspecto más profesional
+- Tarjetas con bordes sutiles y sombras suaves
+- Botones con tonos de vino y estados hover definidos
+- Paginación en vinos con controles Anterior/Siguiente
+
 ### Criterios de aceptación cumplidos
 | Criterio | Estado |
 |----------|--------|
@@ -307,6 +315,7 @@
 - `5316f14` (docs(readme): sección de uso diario)
 - `b6b626a` (docs: informe Etapa 7 Frontend)
 - `04f4791` (fix(etapa7): corregir creación de clientes desde el front)
+- `82d6e3b` (design(front): rediseño minimalista, serio y tecnológico)
 - Push a `origin/main` ✅
 
 ### Informes creados (etapas 1-7)

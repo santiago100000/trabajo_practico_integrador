@@ -1,0 +1,677 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Bodegas del Atuel - API REST",
+    "version": "1.0.0",
+    "description": "API REST de la ETAPA 6 del TP Integrador (UTN FRSR). Toda la lógica de negocio reside en PostgreSQL (triggers, funciones, procedimientos)."
+  },
+  "servers": [
+    { "url": "http://localhost:3000", "description": "Desarrollo local" }
+  ],
+  "tags": [
+    { "name": "salud", "description": "Endpoint de salud" },
+    { "name": "vinos", "description": "Gestión de vinos" },
+    { "name": "clientes", "description": "Gestión de clientes (socio, distribuidor, exportador)" },
+    { "name": "comprobantes", "description": "Ventas y comprobantes" },
+    { "name": "transferencias", "description": "Transferencias entre depósito y salas" },
+    { "name": "ingresos", "description": "Ingresos de vinos al depósito" },
+    { "name": "reportes", "description": "Reportes de la Sección 8 (S1, S6, S7, S8, S9)" }
+  ],
+  "paths": {
+    "/salud": {
+      "get": {
+        "tags": ["salud"],
+        "summary": "Verifica conectividad con la base de datos",
+        "responses": {
+          "200": {
+            "description": "Servicio y DB operativos",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SaludResponse" } } }
+          },
+          "503": { "description": "Error de conexión a la DB" }
+        }
+      }
+    },
+    "/vinos": {
+      "get": {
+        "tags": ["vinos"],
+        "summary": "Listado de vinos con paginación y filtros",
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 10 } },
+          { "name": "tipo", "in": "query", "schema": { "type": "string", "enum": ["tinto", "blanco", "rosado", "espumante"] } },
+          { "name": "cepa", "in": "query", "schema": { "type": "string" } },
+          { "name": "bodega", "in": "query", "schema": { "type": "string" } },
+          { "name": "anada", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado paginado de vinos",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Vino" } } } }
+          }
+        }
+      },
+      "post": {
+        "tags": ["vinos"],
+        "summary": "Alta de vino con composición en transacción",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/VinoCreateRequest" } } }
+        },
+        "responses": {
+          "201": { "description": "Vino creado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreatedResponse" } } } },
+          "409": { "$ref": "#/components/responses/Error409" },
+          "422": { "$ref": "#/components/responses/Error422" }
+        }
+      }
+    },
+    "/vinos/{cod}": {
+      "get": {
+        "tags": ["vinos"],
+        "summary": "Detalle completo de un vino (composición, maridajes, stock)",
+        "parameters": [{ "name": "cod", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": { "description": "Detalle del vino", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/VinoDetalle" } } } },
+          "404": { "description": "Vino no encontrado" }
+        }
+      },
+      "put": {
+        "tags": ["vinos"],
+        "summary": "Modificación de precio (dispara auditoría RN-13)",
+        "parameters": [{ "name": "cod", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/VinoPrecioRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Precio actualizado" },
+          "404": { "description": "Vino no encontrado" },
+          "422": { "$ref": "#/components/responses/Error422" }
+        }
+      },
+      "delete": {
+        "tags": ["vinos"],
+        "summary": "Baja de vino (FK ON DELETE RESTRICT)",
+        "parameters": [{ "name": "cod", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": { "description": "Vino eliminado" },
+          "404": { "description": "Vino no encontrado" },
+          "409": { "$ref": "#/components/responses/Error409" }
+        }
+      }
+    },
+    "/clientes": {
+      "get": {
+        "tags": ["clientes"],
+        "summary": "Listado de clientes con subtipos",
+        "responses": {
+          "200": {
+            "description": "Lista de clientes",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Cliente" } } } }
+          }
+        }
+      },
+      "post": {
+        "tags": ["clientes"],
+        "summary": "Alta de cliente con subtipo (socio, distribuidor, exportador)",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ClienteCreateRequest" } } }
+        },
+        "responses": {
+          "201": { "description": "Cliente creado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreatedResponse" } } } },
+          "409": { "$ref": "#/components/responses/Error409" },
+          "422": { "$ref": "#/components/responses/Error422" }
+        }
+      }
+    },
+    "/clientes/{id}": {
+      "get": {
+        "tags": ["clientes"],
+        "summary": "Detalle de un cliente",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": { "description": "Cliente encontrado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Cliente" } } } },
+          "404": { "description": "Cliente no encontrado" }
+        }
+      },
+      "put": {
+        "tags": ["clientes"],
+        "summary": "Actualización de cliente y subtipo",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ClienteUpdateRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Cliente actualizado" },
+          "404": { "description": "Cliente no encontrado" },
+          "422": { "$ref": "#/components/responses/Error422" }
+        }
+      },
+      "delete": {
+        "tags": ["clientes"],
+        "summary": "Baja de cliente (CASCADE en subtipos)",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": { "description": "Cliente eliminado" },
+          "404": { "description": "Cliente no encontrado" }
+        }
+      }
+    },
+    "/comprobantes": {
+      "post": {
+        "tags": ["comprobantes"],
+        "summary": "Registro de venta completa (cabecera + renglones) en transacción",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ComprobanteCreateRequest" } } }
+        },
+        "responses": {
+          "201": { "description": "Comprobante creado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ComprobanteResponse" } } } },
+          "409": { "$ref": "#/components/responses/Error409" },
+          "422": { "$ref": "#/components/responses/Error422" }
+        }
+      }
+    },
+    "/comprobantes/{nro}": {
+      "get": {
+        "tags": ["comprobantes"],
+        "summary": "Detalle de venta (cabecera + renglones)",
+        "parameters": [{ "name": "nro", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": { "description": "Detalle del comprobante", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ComprobanteDetalle" } } } },
+          "404": { "description": "Comprobante no encontrado" }
+        }
+      }
+    },
+    "/transferencias": {
+      "post": {
+        "tags": ["transferencias"],
+        "summary": "Alta de transferencia en estado 'en_confeccion'",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TransferenciaCreateRequest" } } }
+        },
+        "responses": {
+          "201": { "description": "Transferencia creada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TransferenciaResponse" } } } },
+          "422": { "$ref": "#/components/responses/Error422" }
+        }
+      }
+    },
+    "/transferencias/{nro}/renglones": {
+      "post": {
+        "tags": ["transferencias"],
+        "summary": "Agregar renglón a transferencia en confección",
+        "parameters": [{ "name": "nro", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RenglonTransferenciaRequest" } } }
+        },
+        "responses": {
+          "201": { "description": "Renglón agregado" },
+          "409": { "$ref": "#/components/responses/Error409" },
+          "404": { "description": "Transferencia no encontrada" }
+        }
+      }
+    },
+    "/transferencias/{nro}/terminar": {
+      "post": {
+        "tags": ["transferencias"],
+        "summary": "Cambiar estado de transferencia a 'terminado'",
+        "parameters": [{ "name": "nro", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": { "description": "Transferencia terminada" },
+          "409": { "$ref": "#/components/responses/Error409" },
+          "404": { "description": "Transferencia no encontrada" }
+        }
+      }
+    },
+    "/transferencias/{nro}/procesar": {
+      "post": {
+        "tags": ["transferencias"],
+        "summary": "Ejecuta CALL sp_procesar_transferencia($1) en transacción",
+        "parameters": [{ "name": "nro", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": { "description": "Transferencia procesada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProcesarResponse" } } } },
+          "409": { "$ref": "#/components/responses/Error409" },
+          "404": { "description": "Transferencia no encontrada" },
+          "503": { "description": "Deadlock o serialización" }
+        }
+      }
+    },
+    "/ingresos": {
+      "post": {
+        "tags": ["ingresos"],
+        "summary": "Alta de ingreso en estado 'en_confeccion'",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/IngresoCreateRequest" } } }
+        },
+        "responses": {
+          "201": { "description": "Ingreso creado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/IngresoResponse" } } } },
+          "422": { "$ref": "#/components/responses/Error422" }
+        }
+      }
+    },
+    "/ingresos/{cod}/renglones": {
+      "post": {
+        "tags": ["ingresos"],
+        "summary": "Agregar renglón a ingreso en confección",
+        "parameters": [{ "name": "cod", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RenglonIngresoRequest" } } }
+        },
+        "responses": {
+          "201": { "description": "Renglón agregado" },
+          "409": { "$ref": "#/components/responses/Error409" },
+          "404": { "description": "Ingreso no encontrado" }
+        }
+      }
+    },
+    "/ingresos/{cod}/procesar": {
+      "post": {
+        "tags": ["ingresos"],
+        "summary": "Ejecuta CALL sp_procesar_ingreso($1) en transacción",
+        "parameters": [{ "name": "cod", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": { "description": "Ingreso procesado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProcesarResponse" } } } },
+          "409": { "$ref": "#/components/responses/Error409" },
+          "404": { "description": "Ingreso no encontrado" },
+          "503": { "description": "Deadlock o serialización" }
+        }
+      }
+    },
+    "/reportes/top-vinos": {
+      "get": {
+        "tags": ["reportes"],
+        "summary": "Top 10 vinos más vendidos (Consulta S1)",
+        "responses": {
+          "200": {
+            "description": "Ranking de vinos",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/TopVino" } } } }
+          }
+        }
+      }
+    },
+    "/reportes/ventas-por-sala": {
+      "get": {
+        "tags": ["reportes"],
+        "summary": "Monto total de ventas por sala en el último trimestre (Consulta S8)",
+        "responses": {
+          "200": {
+            "description": "Ventas por sala",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/VentaSala" } } } }
+          }
+        }
+      }
+    },
+    "/reportes/vinos-sin-stock": {
+      "get": {
+        "tags": ["reportes"],
+        "summary": "Vinos sin stock en sala pero con stock en depósito (Consulta S6)",
+        "parameters": [{ "name": "id_sala", "in": "query", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": {
+            "description": "Vinos sin stock en sala",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/VinoSinStock" } } } }
+          },
+          "400": { "description": "id_sala requerido" }
+        }
+      }
+    },
+    "/reportes/transportista-activo": {
+      "get": {
+        "tags": ["reportes"],
+        "summary": "Transportista con mayor actividad en el último mes (Consulta S7)",
+        "responses": {
+          "200": {
+            "description": "Transportista más activo",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TransportistaActivo" } } }
+          }
+        }
+      }
+    },
+    "/reportes/trazabilidad/{cod}": {
+      "get": {
+        "tags": ["reportes"],
+        "summary": "Ficha completa del vino (Consulta S9)",
+        "parameters": [{ "name": "cod", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": { "description": "Ficha de trazabilidad", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Trazabilidad" } } } },
+          "404": { "description": "Vino no encontrado" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "SaludResponse": {
+        "type": "object",
+        "properties": { "status": { "type": "string" }, "db": { "type": "object" } }
+      },
+      "Vino": {
+        "type": "object",
+        "properties": {
+          "cod_vino": { "type": "integer" },
+          "nombre": { "type": "string" },
+          "tipo": { "type": "string", "enum": ["tinto", "blanco", "rosado", "espumante"] },
+          "anada": { "type": "integer" },
+          "volumen_ml": { "type": "integer" },
+          "graduacion": { "type": "number" },
+          "precio": { "type": "number" },
+          "bodega": { "type": "string" }
+        }
+      },
+      "VinoCreateRequest": {
+        "type": "object",
+        "required": ["id_bodega", "nombre", "tipo", "anada", "volumen_ml", "graduacion", "precio", "composicion"],
+        "properties": {
+          "id_bodega": { "type": "integer" },
+          "nombre": { "type": "string" },
+          "tipo": { "type": "string" },
+          "anada": { "type": "integer" },
+          "volumen_ml": { "type": "integer" },
+          "graduacion": { "type": "number" },
+          "precio": { "type": "number" },
+          "composicion": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id_cepa", "porcentaje"],
+              "properties": {
+                "id_cepa": { "type": "integer" },
+                "porcentaje": { "type": "number" }
+              }
+            }
+          }
+        }
+      },
+      "VinoPrecioRequest": {
+        "type": "object",
+        "required": ["precio"],
+        "properties": { "precio": { "type": "number" } }
+      },
+      "VinoDetalle": {
+        "type": "object",
+        "allOf": [
+          { "$ref": "#/components/schemas/Vino" },
+          {
+            "type": "object",
+            "properties": {
+              "composicion": { "type": "array", "items": { "$ref": "#/components/schemas/ComposicionCepa" } },
+              "maridajes": { "type": "array", "items": { "$ref": "#/components/schemas/Maridaje" } },
+              "stock": { "$ref": "#/components/schemas/StockVino" }
+            }
+          }
+        ]
+      },
+      "ComposicionCepa": {
+        "type": "object",
+        "properties": {
+          "id_cepa": { "type": "integer" },
+          "cepa": { "type": "string" },
+          "tipo_cepa": { "type": "string" },
+          "porcentaje": { "type": "number" }
+        }
+      },
+      "Maridaje": {
+        "type": "object",
+        "properties": {
+          "id_maridaje": { "type": "integer" },
+          "nombre": { "type": "string" },
+          "temperatura_servicio": { "type": "number" }
+        }
+      },
+      "StockVino": {
+        "type": "object",
+        "properties": {
+          "stock_deposito": { "type": "integer" },
+          "stock_salas": { "type": "integer" },
+          "stock_total": { "type": "integer" }
+        }
+      },
+      "CreatedResponse": {
+        "type": "object",
+        "properties": {
+          "cod_vino": { "type": "integer" },
+          "id_cliente": { "type": "integer" },
+          "mensaje": { "type": "string" }
+        }
+      },
+      "Cliente": {
+        "type": "object",
+        "properties": {
+          "id_cliente": { "type": "integer" },
+          "tipo_cliente": { "type": "string" },
+          "nombre_razon_social": { "type": "string" },
+          "tipo_doc": { "type": "string" },
+          "nro_doc": { "type": "string" },
+          "direccion": { "type": "string" },
+          "id_localidad": { "type": "integer" },
+          "fecha_alta": { "type": "string" },
+          "descuento": { "type": "number" },
+          "email": { "type": "string" },
+          "telefono": { "type": "string" }
+        }
+      },
+      "ClienteCreateRequest": {
+        "type": "object",
+        "required": ["tipo_cliente", "nombre_razon_social", "tipo_doc", "nro_doc", "direccion", "id_localidad", "subtipo"],
+        "properties": {
+          "tipo_cliente": { "type": "string", "enum": ["socio", "distribuidor", "exportador"] },
+          "nombre_razon_social": { "type": "string" },
+          "tipo_doc": { "type": "string" },
+          "nro_doc": { "type": "string" },
+          "direccion": { "type": "string" },
+          "id_localidad": { "type": "integer" },
+          "fecha_alta": { "type": "string" },
+          "email": { "type": "string" },
+          "telefono": { "type": "string" },
+          "subtipo": { "type": "string", "enum": ["socio", "distribuidor", "exportador"] },
+          "zona_cobertura": { "type": "string" },
+          "nro_habilitacion": { "type": "string" },
+          "pais_destino": { "type": "string" }
+        }
+      },
+      "ClienteUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "nombre_razon_social": { "type": "string" },
+          "tipo_doc": { "type": "string" },
+          "nro_doc": { "type": "string" },
+          "direccion": { "type": "string" },
+          "id_localidad": { "type": "integer" },
+          "email": { "type": "string" },
+          "telefono": { "type": "string" },
+          "subtipo": { "type": "string" },
+          "zona_cobertura": { "type": "string" },
+          "nro_habilitacion": { "type": "string" },
+          "pais_destino": { "type": "string" }
+        }
+      },
+      "ComprobanteCreateRequest": {
+        "type": "object",
+        "required": ["id_cliente", "id_sala", "renglones"],
+        "properties": {
+          "id_cliente": { "type": "integer" },
+          "id_sala": { "type": "integer" },
+          "renglones": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["cod_vino", "cantidad", "precio_unitario", "descuento_aplicado"],
+              "properties": {
+                "cod_vino": { "type": "integer" },
+                "cantidad": { "type": "integer" },
+                "precio_unitario": { "type": "number" },
+                "descuento_aplicado": { "type": "number" },
+                "subtotal": { "type": "number" }
+              }
+            }
+          }
+        }
+      },
+      "ComprobanteResponse": {
+        "type": "object",
+        "properties": {
+          "nro_comprobante": { "type": "integer" },
+          "mensaje": { "type": "string" }
+        }
+      },
+      "ComprobanteDetalle": {
+        "type": "object",
+        "properties": {
+          "nro_comprobante": { "type": "integer" },
+          "fecha": { "type": "string" },
+          "cliente": { "type": "string" },
+          "sala": { "type": "string" },
+          "subtotal": { "type": "number" },
+          "descuento": { "type": "number" },
+          "total": { "type": "number" },
+          "renglones": { "type": "array" }
+        }
+      },
+      "TransferenciaCreateRequest": {
+        "type": "object",
+        "required": ["id_sala"],
+        "properties": {
+          "id_sala": { "type": "integer" },
+          "observaciones": { "type": "string" }
+        }
+      },
+      "TransferenciaResponse": {
+        "type": "object",
+        "properties": {
+          "nro_solicitud": { "type": "integer" },
+          "estado": { "type": "string" },
+          "mensaje": { "type": "string" }
+        }
+      },
+      "RenglonTransferenciaRequest": {
+        "type": "object",
+        "required": ["cod_vino", "cantidad"],
+        "properties": {
+          "cod_vino": { "type": "integer" },
+          "cantidad": { "type": "integer" }
+        }
+      },
+      "IngresoCreateRequest": {
+        "type": "object",
+        "required": ["fecha", "cod_transportista", "id_bodega"],
+        "properties": {
+          "fecha": { "type": "string" },
+          "cod_transportista": { "type": "integer" },
+          "id_bodega": { "type": "integer" },
+          "observaciones": { "type": "string" }
+        }
+      },
+      "IngresoResponse": {
+        "type": "object",
+        "properties": {
+          "cod_ingreso": { "type": "integer" },
+          "estado": { "type": "string" },
+          "mensaje": { "type": "string" }
+        }
+      },
+      "RenglonIngresoRequest": {
+        "type": "object",
+        "required": ["cod_vino", "cantidad"],
+        "properties": {
+          "cod_vino": { "type": "integer" },
+          "cantidad": { "type": "integer" }
+        }
+      },
+      "ProcesarResponse": {
+        "type": "object",
+        "properties": {
+          "nro_solicitud": { "type": "integer" },
+          "cod_ingreso": { "type": "integer" },
+          "estado": { "type": "string" },
+          "mensaje": { "type": "string" }
+        }
+      },
+      "TopVino": {
+        "type": "object",
+        "properties": {
+          "cod_vino": { "type": "integer" },
+          "nombre": { "type": "string" },
+          "tipo": { "type": "string" },
+          "anada": { "type": "integer" },
+          "botellas_vendidas": { "type": "integer" }
+        }
+      },
+      "VentaSala": {
+        "type": "object",
+        "properties": {
+          "id_sala": { "type": "integer" },
+          "calle": { "type": "string" },
+          "numero": { "type": "string" },
+          "ventas_totales": { "type": "number" }
+        }
+      },
+      "VinoSinStock": {
+        "type": "object",
+        "properties": {
+          "cod_vino": { "type": "integer" },
+          "nombre": { "type": "string" },
+          "tipo": { "type": "string" },
+          "anada": { "type": "integer" }
+        }
+      },
+      "TransportistaActivo": {
+        "type": "object",
+        "properties": {
+          "cod_transportista": { "type": "integer" },
+          "razon_social": { "type": "string" },
+          "ingresos_ultimo_mes": { "type": "integer" }
+        }
+      },
+      "Trazabilidad": {
+        "type": "object",
+        "properties": {
+          "cod_vino": { "type": "integer" },
+          "nombre": { "type": "string" },
+          "bodega": { "type": "string" },
+          "cepas": { "type": "string" },
+          "maridajes": { "type": "string" },
+          "stock_total": { "type": "integer" }
+        }
+      }
+    },
+    "responses": {
+      "Error409": {
+        "description": "Conflicto (UNIQUE, FK o regla de negocio P0001)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": { "type": "string" },
+                "codigo": { "type": "string" },
+                "mensaje": { "type": "string" },
+                "detalle": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "Error422": {
+        "description": "Validación (CHECK, NOT NULL)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": { "type": "string" },
+                "codigo": { "type": "string" },
+                "mensaje": { "type": "string" },
+                "detalle": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

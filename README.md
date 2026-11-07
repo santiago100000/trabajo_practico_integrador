@@ -171,6 +171,78 @@ npm test
 
 ---
 
+## Uso diario — Cómo usar el sistema cada vez que quieras
+
+### 1. Levantar el sistema
+
+Desde la carpeta del proyecto, ejecuta:
+
+```bash
+docker compose up --build
+```
+
+Esto levanta todos los servicios:
+| Servicio | Descripción | URL |
+|----------|-------------|-----|
+| `db` | PostgreSQL 16 (base de datos) | `127.0.0.1:5433` |
+| `migrate` | Aplica las migraciones SQL y termina | — |
+| `api` | API REST de Node.js/Express | `http://localhost:8001` |
+| `front` | Frontend estático con nginx | `http://localhost:8081` |
+
+### 2. Verificar que todo funciona
+
+```bash
+# Desde PowerShell (Windows)
+Invoke-WebRequest -Uri "http://localhost:8001/salud" -UseBasicParsing
+
+# Desde Linux/Mac
+curl http://localhost:8001/salud
+```
+
+Respuesta esperada: `{"status":"ok","db":{"resultado":1}}`
+
+### 3. Abrir el frontend
+
+En tu navegador ve a:
+
+```
+http://localhost:8081
+```
+
+Tendrás acceso a las 5 pantallas: Dashboard, Vinos, Nueva Venta, Clientes y Reportes.
+
+### 4. Cargar datos de prueba (opcional pero recomendado)
+
+Si quieres datos masivos para probar (20.000 clientes, 150.000 comprobantes, 375.000+ renglones), abre una **segunda terminal** mientras los servicios están corriendo y ejecuta:
+
+```bash
+# Cargar datos masivos con semilla fija (reproducible)
+docker compose --profile seed run --rm seed python seed.py --masivo
+
+# O con volúmenes personalizados
+docker compose --profile seed run --rm seed python seed.py --masivo --clientes 30000 --comprobantes 200000
+```
+
+> **Nota:** El servicio `seed` espera a que las migraciones terminen (`migrate`) antes de ejecutarse. Si cambias contraseñas en `.env`, asegúrate de que `POSTGRES_PASSWORD` y `OWNER_DB_PASSWORD` coincidan.
+
+### 5. Detener el sistema
+
+Cuando termines de usarlo, presioná **Ctrl+C** en la terminal donde está corriendo `docker compose up`.
+
+Para detener y eliminar los contenedores (conservando los datos de la base):
+
+```bash
+docker compose down
+```
+
+Para detener y borrar **todo** incluyendo los datos de la base de datos:
+
+```bash
+docker compose down -v
+```
+
+---
+
 ## Estructura del repositorio
 
 ```

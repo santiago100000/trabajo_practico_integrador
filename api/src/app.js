@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require('cors');
 const errorHandler = require('./middlewares/errorHandler');
 
 const saludRoutes = require('./routes/saludRoutes');
@@ -11,6 +12,7 @@ const reportesRoutes = require('./routes/reportesRoutes');
 
 const app = express();
 
+app.use(cors());
 app.use(express.json());
 
 app.use(saludRoutes);

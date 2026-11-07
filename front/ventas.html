@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bodegas del Atuel — Nueva Venta</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+</head>
+<body>
+  <header>
+    <h1>💰 Nueva Venta</h1>
+    <div class="header-actions">
+      <a href="index.html" class="btn btn-outline">← Volver</a>
+      <a href="vinos.html" class="btn btn-outline">Ver Vinos</a>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="page-title">
+      <span>🧾</span> Registrar Comprobante de Venta
+    </div>
+
+    <div id="alert-area"></div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>Datos de la Venta</h2>
+      </div>
+
+      <form id="form-venta">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="cliente">Cliente</label>
+            <select id="cliente" required></select>
+          </div>
+          <div class="form-group">
+            <label for="sala">Sala de Venta</label>
+            <select id="sala" required></select>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 1.5rem;">
+          <div class="card-header">
+            <h2>🍷 Renglones de Venta</h2>
+            <button type="button" id="btn-agregar-renglon" class="btn btn-primary btn-small">+ Agregar Vino</button>
+          </div>
+
+          <div id="renglones-container">
+            <!-- Se llenan dinámicamente -->
+          </div>
+
+          <div class="resumen-venta" style="margin-top: 1rem; padding: 1rem; background: #F3EFEA; border-radius: var(--radius);">
+            <div style="display: flex; justify-content: space-between; font-size: 0.95rem;">
+              <span>Subtotal:</span>
+              <span id="res-subtotal">$0.00</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.95rem;">
+              <span>Descuento:</span>
+              <span id="res-descuento">$0.00</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 700; color: var(--color-primary); margin-top: 0.5rem;">
+              <span>TOTAL:</span>
+              <span id="res-total">$0.00</span>
+            </div>
+          </div>
+
+          <div class="form-actions" style="margin-top: 1.5rem;">
+            <button type="button" id="btn-cancelar" class="btn btn-outline">Cancelar</button>
+            <button type="submit" id="btn-guardar" class="btn btn-success">Generar Comprobante</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    (async () => {
+      const alertArea = document.getElementById('alert-area');
+      const formVenta = document.getElementById('form-venta');
+      const selectCliente = document.getElementById('cliente');
+      const selectSala = document.getElementById('sala');
+      const renglonesContainer = document.getElementById('renglones-container');
+      const btnAgregar = document.getElementById('btn-agregar-renglon');
+      const resSubtotal = document.getElementById('res-subtotal');
+      const resDescuento = document.getElementById('res-descuento');
+      const resTotal = document.getElementById('res-total');
+      const btnGuardar = document.getElementById('btn-guardar');
+
+      let renglones = [];
+      let vinosDisponibles = [];
+      let clientes = [];
+      let salas = [];
+      let clienteSeleccionado = null;
+
+      function mostrarAlerta(tipo, mensaje) {
+        alertArea.innerHTML = `<div class="alert alert-${tipo}">${mensaje}</div>`;
+      }
+
+      function limpiarAlerta() {
+        alertArea.innerHTML = '';
+      }
+
+      function formatoMoneda(valor) {
+        return '$' + Number(valor || 0).toLocaleString('es-AR', {minimumFractionDigits: 2});
+      }
+
+      function calcularResumenLocal() {
+        // SOLO para mostrar al usuario un estimado visual.
+        // Los valores oficiales los calcula la BD vía triggers (RN-08).
+        // El front NO guarda ni envía estos cálculos como definitivos.
+        let subtotal = 0;
+        let descuento = 0;
+        renglones.forEach(r => {
+          const descuentoRenglon = r.cantidad * r.precio_unitario * (r.descuento_aplicado / 100);
+          const subtotalRenglon = r.cantidad * r.precio_unitario - descuentoRenglon;
+          subtotal += subtotalRenglon;
+          descuento += descuentoRenglon;
+        });
+        const total = subtotal; // La BD recalculará el descuento real del cliente
+
+        resSubtotal.textContent = formatoMoneda(subtotal);
+        resDescuento.textContent = formatoMoneda(descuento);
+        resTotal.textContent = formatoMoneda(total);
+      }
+
+      function renderizarRenglones() {
+        if (renglones.length === 0) {
+          renglonesContainer.innerHTML = '<div class="empty-state" style="padding:1rem;"><p>No hay vinos agregados. Haz clic en "+ Agregar Vino".</p></div>';
+          calcularResumenLocal();
+          return;
+        }
+
+        const filas = renglones.map((r, idx) => {
+          const descuentoRenglon = r.cantidad * r.precio_unitario * (r.descuento_aplicado / 100);
+          const subtotalRenglon = r.cantidad * r.precio_unitario - descuentoRenglon;
+          return `
+            <tr style="display:table;width:100%;margin-bottom:0.5rem;">
+              <td style="padding:0.5rem 1rem;display:table-cell;">
+                <strong>${r.nombre_vino}</strong><br>
+                <small style="color:var(--color-text-muted);">$${r.precio_unitario} c/u</small>
+              </td>
+              <td style="padding:0.5rem 1rem;display:table-cell;">
+                <input type="number" value="${r.cantidad}" min="1" data-idx="${idx}" class="input-cantidad" style="width:80px;">
+              </td>
+              <td style="padding:0.5rem 1rem;display:table-cell;">
+                ${r.descuento_aplicado}%
+              </td>
+              <td style="padding:0.5rem 1rem;display:table-cell; font-weight:600;">
+                ${formatoMoneda(subtotalRenglon)}
+              </td>
+              <td style="padding:0.5rem 1rem;display:table-cell; text-align:right;">
+                <button type="button" data-idx="${idx}" class="btn btn-danger btn-small" onclick="eliminarRenglon(${idx})">×</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        renglonesContainer.innerHTML = `
+          <table style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr>
+                <th style="text-align:left;padding:0.5rem 1rem;border-bottom:2px solid var(--color-border);">Vino</th>
+                <th style="text-align:left;padding:0.5rem 1rem;border-bottom:2px solid var(--color-border);">Cantidad</th>
+                <th style="text-align:left;padding:0.5rem 1rem;border-bottom:2px solid var(--color-border);">Dto. Apl.</th>
+                <th style="text-align:left;padding:0.5rem 1rem;border-bottom:2px solid var(--color-border);">Subtotal</th>
+                <th style="text-align:left;padding:0.5rem 1rem;border-bottom:2px solid var(--color-border);">Acción</th>
+              </tr>
+            </thead>
+            <tbody>${filas}</tbody>
+          </table>
+        `;
+
+        // Asignar eventos a inputs de cantidad
+        document.querySelectorAll('.input-cantidad').forEach(input => {
+          input.addEventListener('change', (e) => {
+            const idx = parseInt(e.target.dataset.idx);
+            const nuevo = parseInt(e.target.value) || 1;
+            renglones[idx].cantidad = Math.max(1, nuevo);
+            calcularResumenLocal();
+            renderizarRenglones();
+          });
+        });
+
+        calcularResumenLocal();
+      }
+
+      window.eliminarRenglon = (idx) => {
+        renglones.splice(idx, 1);
+        renderizarRenglones();
+      };
+
+      async function cargarDatosIniciales() {
+        try {
+          const [clientesResp, salasResp, vinosResp] = await Promise.all([
+            API.listarClientes(),
+            // Salas: usamos listarVinos solo para obtener vinos; salas vendrían de una API de salas si existiera.
+            // Como no hay endpoint de salas listadas, usamos un valor por defecto o solicitamos al backend.
+            // Para este front, usamos sala_id = 1 por defecto y mostramos un input.
+            Promise.resolve([{ id_sala: 1, nombre: 'Sala 1 - Centro', calle: 'Av. Principal', numero: '100' }]),
+            API.listarVinos({ limit: 100 })
+          ]);
+
+          clientes = clientesResp;
+          salas = salasResp;
+          vinosDisponibles = vinosResp;
+
+          // Llenar select de clientes
+          selectCliente.innerHTML = clientes.map(c => `
+            <option value="${c.id_cliente}" data-tipo="${c.tipo_cliente}" data-descuento="${c.descuento}">
+              ${c.nombre_razon_social} (${c.tipo_cliente}, ${c.descuento}% dto.)
+            </option>
+          `).join('');
+
+          // Llenar select de salas
+          selectSala.innerHTML = salas.map(s => `
+            <option value="${s.id_sala}">${s.nombre || s.calle + ' ' + s.numero}</option>
+          `).join('');
+
+          clienteSeleccionado = clientes[0];
+          actualizarDescuentoCliente(clientes[0]);
+
+        } catch (err) {
+          console.error(err);
+          mostrarAlerta('error', `Error cargando datos iniciales: ${err.mensaje || err.message}`);
+        }
+      }
+
+      function actualizarDescuentoCliente(cliente) {
+        clienteSeleccionado = cliente;
+        // Actualizar descuento en todos los renglones existentes según el tipo de cliente
+        renglones.forEach(r => {
+          r.descuento_aplicado = parseFloat(cliente.descuento) || 0;
+        });
+        renderizarRenglones();
+      }
+
+      selectCliente.addEventListener('change', (e) => {
+        const id = parseInt(e.target.value);
+        const cliente = clientes.find(c => c.id_cliente === id);
+        if (cliente) actualizarDescuentoCliente(cliente);
+      });
+
+      btnAgregar.addEventListener('click', () => {
+        if (vinosDisponibles.length === 0) {
+          mostrarAlerta('warning', 'No hay vinos disponibles para agregar.');
+          return;
+        }
+
+        // Seleccionar vino (simple: mostrar select rápido o usar el primero)
+        const vino = vinosDisponibles[0];
+        const descuento = parseFloat(clienteSeleccionado.descuento) || 0;
+
+        // Verificar si ya está agregado
+        const existe = renglones.find(r => r.cod_vino === vino.cod_vino);
+        if (existe) {
+          existe.cantidad += 1;
+        } else {
+          renglones.push({
+            cod_vino: vino.cod_vino,
+            nombre_vino: vino.nombre,
+            cantidad: 1,
+            precio_unitario: parseFloat(vino.precio),
+            descuento_aplicado: descuento
+          });
+        }
+        renderizarRenglones();
+      });
+
+      formVenta.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        limpiarAlerta();
+
+        if (renglones.length === 0) {
+          mostrarAlerta('warning', 'Debes agregar al menos un vino a la venta.');
+          return;
+        }
+
+        const idCliente = parseInt(selectCliente.value);
+        const idSala = parseInt(selectSala.value);
+
+        // Construir payload para la API.
+        // IMPORTANTE: El front NO envía subtotal, descuento ni total calculados.
+        // La BD los calcula vía triggers (RN-08). Solo enviamos lo necesario.
+        const payload = {
+          id_cliente: idCliente,
+          id_sala: idSala,
+          renglones: renglones.map(r => ({
+            cod_vino: r.cod_vino,
+            cantidad: r.cantidad,
+            precio_unitario: r.precio_unitario,
+            descuento_aplicado: r.descuento_aplicado
+            // subtotal se omite: lo calcula el trigger en la BD
+          }))
+        };
+
+        btnGuardar.disabled = true;
+        btnGuardar.textContent = 'Procesando...';
+
+        try {
+          const resultado = await API.crearComprobante(payload);
+          mostrarAlerta('success', `Venta registrada correctamente. Comprobante N° ${resultado.nro_comprobante}`);
+          setTimeout(() => {
+            window.location.href = `index.html`;
+          }, 1500);
+        } catch (err) {
+          console.error('Error creando comprobante:', err);
+          // Criterio de aceptación: mostrar mensaje de regla de negocio y no dejar datos a medias
+          const msg = err.codigo === 'PLPGSQL_RAISE' || err.codigo === 'CHECK_VIOLATED'
+            ? `Regla de negocio: ${err.mensaje || err.message}`
+            : `Error: ${err.mensaje || err.message}`;
+          mostrarAlerta('error', msg);
+        } finally {
+          btnGuardar.disabled = false;
+          btnGuardar.textContent = 'Generar Comprobante';
+        }
+      });
+
+      btnGuardar.addEventListener('click', (e) => {
+        formVenta.requestSubmit ? formVenta.requestSubmit() : formVenta.dispatchEvent(new Event('submit'));
+      });
+
+      const btnCancelar = document.getElementById('btn-cancelar');
+      btnCancelar.addEventListener('click', () => {
+        if (confirm('¿Cancelar la venta? Los datos no guardados se perderán.')) {
+          window.location.href = 'index.html';
+        }
+      });
+
+      // Inicializar
+      cargarDatosIniciales();
+    })();
+  </script>
+</body>
+</html>

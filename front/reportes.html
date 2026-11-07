@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bodegas del Atuel — Reportes</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+</head>
+<body>
+  <header>
+    <h1>📈 Reportes</h1>
+    <div class="header-actions">
+      <a href="index.html" class="btn btn-outline">← Volver</a>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="page-title">
+      <span>📈</span> Reportes de Gestión
+    </div>
+
+    <div id="alert-area"></div>
+
+    <!-- Reporte 1: Top vinos -->
+    <div class="card">
+      <div class="card-header">
+        <h2>🏆 Top 10 Vinos Más Vendidos</h2>
+      </div>
+      <div id="top-vinos-container">
+        <!-- Se llena por JS -->
+      </div>
+    </div>
+
+    <!-- Reporte 2: Ventas por sala -->
+    <div class="card">
+      <div class="card-header">
+        <h2>💰 Ventas por Sala (Último Trimestre)</h2>
+      </div>
+      <div id="ventas-sala-container">
+        <!-- Se llena por JS -->
+      </div>
+    </div>
+
+    <!-- Reporte 3: Vinos sin stock -->
+    <div class="card">
+      <div class="card-header">
+        <h2>📦 Vinos sin Stock en Sala (con stock en depósito)</h2>
+        <div style="display:flex; align-items:center; gap:1rem;">
+          <label for="sala-reporte">Sala:</label>
+          <select id="sala-reporte">
+            <option value="1">Sala 1</option>
+            <option value="2">Sala 2</option>
+            <option value="3">Sala 3</option>
+          </select>
+          <button id="btn-ver-sin-stock" class="btn btn-primary btn-small">Ver</button>
+        </div>
+      </div>
+      <div id="vinos-sin-stock-container">
+        <!-- Se llena por JS -->
+      </div>
+    </div>
+
+    <!-- Reporte 4: Trazabilidad -->
+    <div class="card">
+      <div class="card-header">
+        <h2>🔍 Trazabilidad de Vino</h2>
+      </div>
+      <form id="form-trazabilidad" style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
+        <input type="number" id="cod-vino-trazabilidad" placeholder="Código de vino" min="1" style="padding:0.6rem 0.8rem;border:1.5px solid var(--color-border);border-radius:var(--radius);">
+        <button type="submit" class="btn btn-primary">Buscar</button>
+      </form>
+      <div id="trazabilidad-container">
+        <!-- Se llena por JS -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (async () => {
+      const alertArea = document.getElementById('alert-area');
+
+      function mostrarAlerta(tipo, mensaje) {
+        alertArea.innerHTML = `<div class="alert alert-${tipo}">${mensaje}</div>`;
+      }
+
+      function limpiarAlerta() {
+        alertArea.innerHTML = '';
+      }
+
+      function formatoMoneda(valor) {
+        return '$' + Number(valor || 0).toLocaleString('es-AR', {minimumFractionDigits: 2});
+      }
+
+      // --- Top vinos ---
+      async function cargarTopVinos() {
+        try {
+          const vinos = await API.reporteTopVinos();
+          const container = document.getElementById('top-vinos-container');
+          if (!vinos || vinos.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p>Sin datos de ventas.</p></div>';
+            return;
+          }
+          const filas = vinos.map((v, i) => `
+            <tr>
+              <td>${i + 1}</td>
+              <td><strong>${v.nombre}</strong></td>
+              <td>${v.tipo}</td>
+              <td>${v.anada}</td>
+              <td>${v.botellas_vendidas}</td>
+            </tr>
+          `).join('');
+          container.innerHTML = `
+            <table>
+              <thead>
+                <tr><th>#</th><th>Vino</th><th>Tipo</th><th>Añada</th><th>Botellas Vendidas</th></tr>
+              </thead>
+              <tbody>${filas}</tbody>
+            </table>
+          `;
+        } catch (err) {
+          console.error(err);
+          mostrarAlerta('error', `Error cargando top vinos: ${err.mensaje || err.message}`);
+        }
+      }
+
+      // --- Ventas por sala ---
+      async function cargarVentasSala() {
+        try {
+          const datos = await API.reporteVentasPorSala();
+          const container = document.getElementById('ventas-sala-container');
+          if (!datos || datos.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p>Sin datos de ventas.</p></div>';
+            return;
+          }
+          const filas = datos.map(d => `
+            <tr>
+              <td><strong>Sala ${d.id_sala}</strong></td>
+              <td>${d.calle || ''} ${d.numero || ''}</td>
+              <td>${formatoMoneda(d.ventas_totales)}</td>
+            </tr>
+          `).join('');
+          container.innerHTML = `
+            <table>
+              <thead>
+                <tr><th>Sala</th><th>Dirección</th><th>Ventas Totales (trimestre)</th></tr>
+              </thead>
+              <tbody>${filas}</tbody>
+            </table>
+          `;
+        } catch (err) {
+          console.error(err);
+          mostrarAlerta('error', `Error cargando ventas por sala: ${err.mensaje || err.message}`);
+        }
+      }
+
+      // --- Vinos sin stock ---
+      async function cargarVinosSinStock(idSala) {
+        try {
+          const datos = await API.reporteVinosSinStock(idSala);
+          const container = document.getElementById('vinos-sin-stock-container');
+          if (!datos || datos.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p>Todos los vinos tienen stock en esta sala, o no hay datos.</p></div>';
+            return;
+          }
+          const filas = datos.map(d => `
+            <tr>
+              <td>${d.cod_vino}</td>
+              <td><strong>${d.nombre}</strong></td>
+              <td>${d.tipo}</td>
+              <td>${d.anada}</td>
+            </tr>
+          `).join('');
+          container.innerHTML = `
+            <table>
+              <thead>
+                <tr><th>Código</th><th>Vino</th><th>Tipo</th><th>Añada</th></tr>
+              </thead>
+              <tbody>${filas}</tbody>
+            </table>
+          `;
+        } catch (err) {
+          console.error(err);
+          mostrarAlerta('error', `Error cargando vinos sin stock: ${err.mensaje || err.message}`);
+        }
+      }
+
+      document.getElementById('btn-ver-sin-stock').addEventListener('click', (e) => {
+        e.preventDefault();
+        const idSala = document.getElementById('sala-reporte').value;
+        cargarVinosSinStock(idSala);
+      });
+
+      // --- Trazabilidad ---
+      const formTrazabilidad = document.getElementById('form-trazabilidad');
+      const trazabilidadContainer = document.getElementById('trazabilidad-container');
+
+      formTrazabilidad.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const codVino = document.getElementById('cod-vino-trazabilidad').value;
+        if (!codVino) return;
+
+        try {
+          limpiarAlerta();
+          const vino = await API.reporteTrazabilidad(codVino);
+          if (!vino) {
+            trazabilidadContainer.innerHTML = '<div class="empty-state"><p>No se encontró el vino.</p></div>';
+            return;
+          }
+          trazabilidadContainer.innerHTML = `
+            <div style="display:flex; gap:2rem;">
+              <div style="flex:1;">
+                <h3>${vino.nombre}</h3>
+                <p><strong>Bodega:</strong> ${vino.bodega}</p>
+                <p><strong>Cepas:</strong> ${vino.cepas || 'No registradas'}</p>
+                <p><strong>Maridajes:</strong> ${vino.maridajes || 'No registrados'}</p>
+              </div>
+              <div style="flex:1;">
+                <h3>📦 Stock</h3>
+                <p><strong>Total:</strong> ${vino.stock_total || 0}</p>
+              </div>
+            </div>
+          `;
+        } catch (err) {
+          console.error(err);
+          mostrarAlerta('error', `Error en trazabilidad: ${err.mensaje || err.message}`);
+        }
+      });
+
+      // Cargar todo al iniciar
+      cargarTopVinos();
+      cargarVentasSala();
+      cargarVinosSinStock(1);
+    })();
+  </script>
+</body>
+</html>

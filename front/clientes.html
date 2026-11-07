@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bodegas del Atuel — Clientes</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+</head>
+<body>
+  <header>
+    <h1>👥 Clientes</h1>
+    <div class="header-actions">
+      <a href="index.html" class="btn btn-outline">← Volver</a>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="page-title">
+      <span>👥</span> Gestión de Clientes
+    </div>
+
+    <div id="alert-area"></div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>Listado de Clientes</h2>
+      </div>
+
+      <div id="clientes-container">
+        <!-- Se llena por JS -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (async () => {
+      const alertArea = document.getElementById('alert-area');
+      const clientesContainer = document.getElementById('clientes-container');
+
+      function mostrarAlerta(tipo, mensaje) {
+        alertArea.innerHTML = `<div class="alert alert-${tipo}">${mensaje}</div>`;
+      }
+
+      function tipoClienteLabel(tipo) {
+        const map = { socio: 'Socio', distribuidor: 'Distribuidor', exportador: 'Exportador' };
+        return map[tipo] || tipo;
+      }
+
+      async function cargarClientes() {
+        try {
+          const clientes = await API.listarClientes();
+          renderizarClientes(clientes);
+        } catch (err) {
+          console.error(err);
+          mostrarAlerta('error', `Error cargando clientes: ${err.mensaje || err.message}`);
+        }
+      }
+
+      function renderizarClientes(clientes) {
+        if (!clientes || clientes.length === 0) {
+          clientesContainer.innerHTML = '<div class="empty-state"><h3>No hay clientes registrados</h3></div>';
+          return;
+        }
+
+        const filas = clientes.map(c => {
+          const esSocio = c.es_socio ? 'Sí' : 'No';
+          const esDistribuidor = c.es_distribuidor ? 'Sí' : 'No';
+          const esExportador = c.es_exportador ? 'Sí' : 'No';
+          return `
+            <tr>
+              <td>${c.id_cliente}</td>
+              <td><strong>${c.nombre_razon_social}</strong></td>
+              <td>${tipoClienteLabel(c.tipo_cliente)}</td>
+              <td>${c.tipo_doc} ${c.nro_doc}</td>
+              <td>${c.descuento}%</td>
+              <td>
+                <span style="font-size:0.8rem;">Socio: ${esSocio}<br>Dist: ${esDistribuidor}<br>Exp: ${esExportador}</span>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        clientesContainer.innerHTML = `
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th><th>Nombre / Razón Social</th><th>Tipo</th><th>Documento</th><th>Descuento</th><th>Subtipos</th>
+              </tr>
+            </thead>
+            <tbody>${filas}</tbody>
+          </table>
+        `;
+      }
+
+      cargarClientes();
+    })();
+  </script>
+</body>
+</html>

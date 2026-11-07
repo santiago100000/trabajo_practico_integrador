@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bodegas del Atuel — Dashboard</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+</head>
+<body>
+  <header>
+    <h1>🍷 Bodegas del Atuel</h1>
+    <div class="header-actions">
+      <a href="vinos.html" class="btn btn-primary">Vinos</a>
+      <a href="clientes.html" class="btn btn-primary">Clientes</a>
+      <a href="ventas.html" class="btn btn-success">Nueva Venta</a>
+      <a href="reportes.html" class="btn btn-outline">Reportes</a>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="page-title">
+      <span>📊</span> Dashboard
+    </div>
+
+    <!-- Alerta de estado de la API -->
+    <div id="alert-area"></div>
+
+    <!-- Métricas rápidas -->
+    <div class="metrics" id="metrics-container">
+      <!-- Se llenan por JS -->
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>🏆 Top 5 Vinos Más Vendidos</h2>
+        <a href="vinos.html" class="btn btn-small btn-outline">Ver todos los vinos</a>
+      </div>
+      <div id="top-vinos-container">
+        <!-- Se llenan por JS -->
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>📋 Acciones Rápidas</h2>
+      </div>
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        <a href="vinos.html" class="btn btn-primary">Gestionar Vinos</a>
+        <a href="clientes.html" class="btn btn-primary">Gestionar Clientes</a>
+        <a href="ventas.html" class="btn btn-success">Registrar Venta</a>
+        <a href="reportes.html" class="btn btn-outline">Ver Reportes</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (async () => {
+      const alertArea = document.getElementById('alert-area');
+      const metricsContainer = document.getElementById('metrics-container');
+      const topVinosContainer = document.getElementById('top-vinos-container');
+
+      function mostrarAlerta(tipo, mensaje) {
+        alertArea.innerHTML = `
+          <div class="alert alert-${tipo}">${mensaje}</div>
+        `;
+      }
+
+      try {
+        // Verificar salud de la API
+        const salud = await API.salud();
+        console.log('API conectada:', salud);
+
+        // Métricas (simuladas con datos de ejemplo ya que la API real no tiene endpoint de conteo global)
+        // Las obtenemos de los reportes disponibles
+        const topVinos = await API.reporteTopVinos();
+
+        // Renderizar métricas
+        metricsContainer.innerHTML = `
+          <div class="metric">
+            <div class="label">Vinos en catálogo</div>
+            <div class="value" id="met-vinos">-</div>
+          </div>
+          <div class="metric">
+            <div class="label">Ventas hoy</div>
+            <div class="value" id="met-ventas">-</div>
+          </div>
+          <div class="metric">
+            <div class="label">Clientes activos</div>
+            <div class="value" id="met-clientes">-</div>
+          </div>
+          <div class="metric">
+            <div class="label">Stock total unidades</div>
+            <div class="value" id="met-stock">-</div>
+          </div>
+        `;
+
+        // Renderizar top vinos
+        if (topVinos.length === 0) {
+          topVinosContainer.innerHTML = '<div class="empty-state"><h3>Sin datos de ventas aún</h3><p>Registra la primera venta para ver el ranking.</p></div>';
+        } else {
+          const filas = topVinos.slice(0, 5).map((v, i) => `
+            <tr>
+              <td>${i + 1}</td>
+              <td>${v.nombre}</td>
+              <td>${v.tipo}</td>
+              <td>${v.anada}</td>
+              <td>${v.botellas_vendidas}</td>
+            </tr>
+          `).join('');
+          topVinosContainer.innerHTML = `
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th><th>Vino</th><th>Tipo</th><th>Añada</th><th>Botellas vendidas</th>
+                </tr>
+              </thead>
+              <tbody>${filas}</tbody>
+            </table>
+          `;
+        }
+
+      } catch (err) {
+        console.error('Error conectando con la API:', err);
+        mostrarAlerta('error', `No se pudo conectar con la API: ${err.mensaje || err.message}. Asegúrate de que el servidor esté corriendo en ${CONFIG.API_BASE_URL}`);
+      }
+    })();
+  </script>
+</body>
+</html>

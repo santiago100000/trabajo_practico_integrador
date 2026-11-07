@@ -81,5 +81,16 @@ services:
       db:
         condition: service_healthy
 
+  front:
+    image: nginx:alpine
+    container_name: bodegas_front
+    ports:
+      - "127.0.0.1:8081:80"
+    volumes:
+      - ./front:/usr/share/nginx/html:ro
+    depends_on:
+      api:
+        condition: service_healthy
+
 volumes:
   bodegas_db_data:

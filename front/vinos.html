@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bodegas del Atuel — Vinos</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+</head>
+<body>
+  <header>
+    <h1>🍷 Vinos</h1>
+    <div class="header-actions">
+      <a href="index.html" class="btn btn-outline">← Volver</a>
+      <a href="ventas.html" class="btn btn-success">Nueva Venta</a>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="page-title">
+      <span>🍷</span> Catálogo de Vinos
+    </div>
+
+    <div id="alert-area"></div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>Listado de Vinos</h2>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+          <input type="text" id="filtro-nombre" placeholder="Buscar por nombre...">
+          <select id="filtro-tipo">
+            <option value="">Todos los tipos</option>
+            <option value="tinto">Tinto</option>
+            <option value="blanco">Blanco</option>
+            <option value="rosado">Rosado</option>
+            <option value="espumante">Espumante</option>
+          </select>
+          <button id="btn-aplicar-filtros" class="btn btn-primary btn-small">Filtrar</button>
+        </div>
+      </div>
+
+      <div id="vinos-container">
+        <!-- Se llena por JS -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (async () => {
+      const alertArea = document.getElementById('alert-area');
+      const vinosContainer = document.getElementById('vinos-container');
+      const filtroNombre = document.getElementById('filtro-nombre');
+      const filtroTipo = document.getElementById('filtro-tipo');
+      const btnAplicar = document.getElementById('btn-aplicar-filtros');
+
+      function mostrarAlerta(tipo, mensaje) {
+        alertArea.innerHTML = `<div class="alert alert-${tipo}">${mensaje}</div>`;
+      }
+
+      async function cargarVinos() {
+        const params = {};
+        if (filtroNombre.value.trim()) params.bodega = filtroNombre.value.trim();
+        if (filtroTipo.value) params.tipo = filtroTipo.value;
+
+        try {
+          const vinos = await API.listarVinos(params);
+          renderizarVinos(vinos);
+        } catch (err) {
+          console.error(err);
+          mostrarAlerta('error', `Error cargando vinos: ${err.mensaje || err.message}`);
+        }
+      }
+
+      function renderizarVinos(vinos) {
+        if (!vinos || vinos.length === 0) {
+          vinosContainer.innerHTML = '<div class="empty-state"><h3>No se encontraron vinos</h3><p>Prueba con otros filtros o agrega un vino nuevo.</p></div>';
+          return;
+        }
+
+        const filas = vinos.map(v => `
+          <tr>
+            <td>${v.cod_vino}</td>
+            <td><strong>${v.nombre}</strong></td>
+            <td><span style="text-transform:uppercase">${v.tipo}</span></td>
+            <td>${v.anada}</td>
+            <td>$${Number(v.precio).toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+            <td>${v.stock_total || 0}</td>
+            <td>
+              <a href="ventas.html?vino=${v.cod_vino}" class="btn btn-small btn-primary">Vender</a>
+            </td>
+          </tr>
+        `).join('');
+
+        vinosContainer.innerHTML = `
+          <table>
+            <thead>
+              <tr>
+                <th>Código</th><th>Nombre</th><th>Tipo</th><th>Añada</th><th>Precio</th><th>Stock Total</th><th>Acción</th>
+              </tr>
+            </thead>
+            <tbody>${filas}</tbody>
+          </table>
+        `;
+      }
+
+      btnAplicar.addEventListener('click', cargarVinos);
+
+      // Cargar al iniciar
+      cargarVinos();
+    })();
+  </script>
+</body>
+</html>

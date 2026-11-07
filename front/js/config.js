@@ -8,12 +8,11 @@
 
 const CONFIG = {
   // URL base de la API REST (Etapa 6)
-  // Usa ruta relativa "/api" servida por nginx (mismo puerto 8081) para evitar problemas de CORS.
-  // nginx hace proxy_pass de /api hacia http://api:8001 dentro de la red de Docker.
+  // La API corre en http://localhost:8001 y tiene CORS habilitado para el front en 8081.
   API_BASE_URL:
     typeof window !== 'undefined' && window.__API_BASE_URL__
       ? window.__API_BASE_URL__
-      : '/api',
+      : 'http://localhost:8001',
 
   // Tiempo de espera para peticiones (ms)
   REQUEST_TIMEOUT: 10000,

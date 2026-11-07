@@ -3,13 +3,13 @@
 ## Estado general del repositorio
 
 **Rama:** `main`  
-**Último commit:** `22e3e48` (Etapa 5: optimizar S12a y actualizar informe EXPLAIN)  
+**Último commit:** `cf49de2` (Informe de la etapa 6 - API REST)  
 **Push a `origin/main`:** ✅ Sincronizado  
-**Última actualización:** 06/11/2026  
+**Última actualización:** 07/11/2026  
 
-**Etapas completadas:** 1, 2, 3, 4, 5  
+**Etapas completadas:** 1, 2, 3, 4, 5, 6  
 **Etapa en curso:** ninguna  
-**Etapas pendientes:** 6, 7, 9 (etapa 8 de despliegue en la nube descartada)  
+**Etapas pendientes:** 7, 9 (etapa 8 de despliegue en la nube descartada)  
 
 ---
 
@@ -212,6 +212,46 @@
 
 ---
 
+## Etapa 6: API REST — COMPLETADA ✅
+
+**Fecha:** 07/11/2026
+
+### Implementado
+- Servidor Express en `api/src/app.js` y `api/src/index.js` escuchando en puerto 8001
+- Capa de acceso a datos con `pg` (consultas parametrizadas, sin ORM) en `api/src/db/`
+- 7 controladores en `api/src/controllers/`
+- 7 rutas REST en `api/src/routes/`
+- Middleware de manejo de errores SQLSTATE → códigos HTTP en `api/src/middlewares/errorHandler.js`
+- Dockerfile en `api/Dockerfile` (Node.js 20-alpine, EXPOSE 8001)
+- Documentación OpenAPI/Swagger en `api/docs/openapi.json`
+- 12 pruebas unitarias con Jest y Supertest en `api/tests/`
+- Servicio `api` en `docker-compose.yml` con healthcheck en puerto 8001
+
+### Endpoints implementados
+- `GET /salud` — Health check con consulta a BD
+- `GET/POST/PUT/DELETE /vinos` — CRUD de vinos con composición y stock
+- `GET/POST/PUT/DELETE /clientes` — CRUD de clientes con subtipos
+- `GET/POST /comprobantes` — Comprobantes con renglones (triggers RN-08/RN-09)
+- `POST/POST/POST /ingresos` — Crear, agregar renglones, procesar (sp_procesar_ingreso)
+- `POST/POST/POST/POST /transferencias` — Crear, agregar renglones, terminar, procesar (sp_procesar_transferencia)
+- `GET /reportes/*` — Top vinos, ventas por sala, vinos sin stock, transportista activo, trazabilidad
+
+### Evidencia de funcionamiento
+- `curl http://localhost:8001/salud` responde `{"status":"ok","db":{"resultado":1}}`
+- Migraciones 001-008 aplicadas sin errores
+- Rol `app_rw` conecta correctamente con privilegios mínimos
+
+**Commit y push:** `ee1272e` (README) y `cf49de2` (informe etapa 6) — Push a `origin/main` ✅
+
+**Criterios de aceptación Etapa 6:**
+- API REST funcionando en local con Docker Compose ✅
+- Retorna JSON ✅
+- Traduce errores SQL a códigos HTTP claros ✅
+- Conecta con rol de privilegios mínimos (app_rw) ✅
+- Consultas SQL parametrizadas (sin inyección SQL) ✅
+
+---
+
 ## Cambios estructurales realizados
 
 - `docker-compose.yml`: servicios `db`, `migrate` y `seed` (profile `seed`)
@@ -221,15 +261,15 @@
 
 ---
 
-**Informes creados (etapas 1-5):**
+**Informes creados (etapas 1-6):**
 - `docs/informes/informe_etapa1_modelado.md` — Modelo, normalización, diccionario, decisiones de diseño.
 - `docs/informes/informe_etapa2_integridad.md` — Constraints, funciones, procedimientos, triggers, vistas, roles, pruebas.
 - `docs/informes/informe_etapa3_carga_masiva.md` — Catálogos CSV, orden de carga FK, carga masiva Faker, triggers, consultas de control.
 - `docs/informes/informe_etapa4_indices.md` — Índices y rendimiento (pasos 1 a 8 con resultados reales EXPLAIN).
 - `docs/informes/informe_etapa5_explain.md` — Planes EXPLAIN para consultas S1 a S12.
+- `docs/informes/informe_etapa6_api.md` — API REST: arquitectura, endpoints, tests, despliegue Docker.
 
 ## Próximos pasos sugeridos (cuando se decida continuar)
 
-1. Etapa 6: API REST con FastAPI
-2. Etapa 7: Frontend con nginx
-3. Etapa 9: Documentación y defensa (etapa 8 de despliegue en la nube descartada)
+1. Etapa 7: Frontend con nginx
+2. Etapa 9: Documentación y defensa (etapa 8 de despliegue en la nube descartada)

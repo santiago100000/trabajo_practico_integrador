@@ -63,6 +63,10 @@
             <label for="cli-id-localidad">ID de localidad</label>
             <input type="number" id="cli-id-localidad" required min="1">
           </div>
+          <div class="form-group" style="display:none;">
+            <label for="cli-fecha-alta">Fecha de alta</label>
+            <input type="date" id="cli-fecha-alta" required>
+          </div>
           <div class="form-group">
             <label for="cli-subtipo">Subtipo</label>
             <select id="cli-subtipo">
@@ -188,8 +192,13 @@
       const formCliente = document.getElementById('form-cliente');
       const btnLimpiarCliente = document.getElementById('btn-limpiar-cliente');
 
+      // Establecer fecha de alta por defecto (hoy)
+      const fechaHoy = new Date().toISOString().split('T')[0];
+      document.getElementById('cli-fecha-alta').value = fechaHoy;
+
       btnLimpiarCliente.addEventListener('click', () => {
         formCliente.reset();
+        document.getElementById('cli-fecha-alta').value = fechaHoy;
       });
 
       formCliente.addEventListener('submit', async (e) => {
@@ -204,6 +213,7 @@
           nro_doc: document.getElementById('cli-nro-doc').value,
           direccion: document.getElementById('cli-direccion').value,
           id_localidad: parseInt(document.getElementById('cli-id-localidad').value),
+          fecha_alta: document.getElementById('cli-fecha-alta').value,
           subtipo: subtipo,
           email: document.getElementById('cli-email').value || null,
           telefono: document.getElementById('cli-telefono').value || null,

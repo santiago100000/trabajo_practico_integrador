@@ -1,5 +1,7 @@
 const { pool } = require('./index');
 
+const DESCUENTOS_POR_TIPO = { socio: 10, distribuidor: 20, exportador: 30 };
+
 async function listarClientes() {
   const query = `
     SELECT c.id_cliente, c.tipo_cliente, c.nombre_razon_social, c.tipo_doc, c.nro_doc,
@@ -36,19 +38,22 @@ async function obtenerCliente(idCliente) {
 
 async function crearCliente({ tipo_cliente, nombre_razon_social, tipo_doc, nro_doc,
                               direccion, id_localidad, fecha_alta, email, telefono,
-                              subtipo, zona_cobertura, nro_habilitacion, pais_destino }) {
+                              descuento, subtipo, zona_cobertura, nro_habilitacion, pais_destino }) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    const clienteQuery = `
-      INSERT INTO cliente (tipo_cliente, nombre_razon_social, tipo_doc, nro_doc, direccion,
-                           id_localidad, fecha_alta, email, telefono)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING id_cliente
-    `;
+    // Si no se especifica descuento, usar el valor por defecto según tipo de cliente (RN-06)
+    const descuentoValor = descuento !== undefined && descuento !== null
+      ? parseFloat(descuento)
+      : DESCUENTOS_POR_TIPO[tipo_cliente] ?? 0;
+
+    const clienteQuery = `INSERT INTO cliente (tipo_cliente, nombre_razon_social, tipo_doc, nro_doc, direccion,
+                                                   id_localidad, fecha_alta, email, telefono, descuento)
+                          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                          RETURNING id_cliente`;
     const clienteValues = [tipo_cliente, nombre_razon_social, tipo_doc, nro_doc,
-                           direccion, id_localidad, fecha_alta, email, telefono];
+                           direccion, id_localidad, fecha_alta, email, telefono, descuentoValor];
     const clienteResult = await client.query(clienteQuery, clienteValues);
     const idCliente = clienteResult.rows[0].id_cliente;
 
@@ -86,7 +91,7 @@ async function actualizarCliente(idCliente, { nombre_razon_social, tipo_doc, nro
     await client.query(
       `UPDATE cliente SET nombre_razon_social = $1, tipo_doc = $2, nro_doc = $3,
                            direccion = $4, id_localidad = $5, email = $6, telefono = $7
-       WHERE id_cliente = $8`,
+         WHERE id_cliente = $8`,
       [nombre_razon_social, tipo_doc, nro_doc, direccion, id_localidad, email, telefono, idCliente]
     );
 

@@ -256,8 +256,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_coherencia_cliente_subtipo
+DROP TRIGGER IF EXISTS trg_coherencia_cliente_subtipo ON cliente;
+
+CREATE CONSTRAINT TRIGGER trg_coherencia_cliente_subtipo
     AFTER INSERT OR UPDATE ON cliente
+    DEFERRABLE INITIALLY DEFERRED
     FOR EACH ROW
     EXECUTE FUNCTION fn_trg_coherencia_cliente_subtipo();
 

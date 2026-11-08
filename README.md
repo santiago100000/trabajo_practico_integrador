@@ -246,3 +246,9 @@ docker compose down -v
 - **La base de datos está en `127.0.0.1:5433`** (configurable vía `DB_PORT` en `.env`).
 - **El frontend está en `http://localhost:8081`**.
 - Los archivos de la `CARPETA TEMPORAL/` son de referencia local del proyecto.
+
+---
+
+## Nota sobre el despliegue (Etapa 8)
+
+Por indicación del docente, la **Etapa 8 (despliegue en la nube)** se omite en esta entrega. El sistema está configurado para ejecutarse **exclusivamente en entorno local** mediante Docker Compose. No hay URL pública, ni servidor externo, ni conexión cifrada a proveedor de nube. Todos los servicios (base de datos, API y frontend) se levantan en la máquina local con `docker compose up --build`.

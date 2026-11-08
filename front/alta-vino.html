@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bodegas del Atuel — Alta de Vino</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Alta de Vino</h1>
+    <div class="header-actions">
+      <a href="vinos.html" class="btn btn-outline">← Volver al catálogo</a>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="page-title">
+      <span>🍷</span> Alta de Vino
+    </div>
+
+    <div id="alert-area"></div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>Datos del Vino</h2>
+      </div>
+
+      <form id="form-vino">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="vino-bodega">Bodega</label>
+            <select id="vino-bodega" required></select>
+          </div>
+          <div class="form-group">
+            <label for="vino-nombre">Nombre</label>
+            <input type="text" id="vino-nombre" required placeholder="Ej: Malbec Reserva">
+          </div>
+          <div class="form-group">
+            <label for="vino-tipo">Tipo</label>
+            <select id="vino-tipo" required>
+              <option value="tinto">Tinto</option>
+              <option value="blanco">Blanco</option>
+              <option value="rosado">Rosado</option>
+              <option value="espumante">Espumante</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="vino-anada">Añada</label>
+            <input type="number" id="vino-anada" required min="1990" max="2100" placeholder="2020">
+          </div>
+          <div class="form-group">
+            <label for="vino-volumen">Volumen (ml)</label>
+            <select id="vino-volumen" required>
+              <option value="187">187 ml</option>
+              <option value="375">375 ml</option>
+              <option value="750">750 ml</option>
+              <option value="1000">1000 ml</option>
+              <option value="1500">1500 ml (Magnum)</option>
+              <option value="3000">3000 ml (Doble Magnum)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="vino-graduacion">Graduación alcohólica (°)</label>
+            <input type="number" id="vino-graduacion" required min="5" max="20" step="0.1" placeholder="14.0">
+          </div>
+          <div class="form-group">
+            <label for="vino-precio">Precio ($)</label>
+            <input type="number" id="vino-precio" required min="0.01" step="0.01" placeholder="12500.00">
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 1.5rem;">
+          <div class="card-header">
+            <h2>Composición de Cepas</h2>
+            <span style="font-size: 0.85rem; color: var(--color-text-muted);">La suma de porcentajes debe ser exactamente 100 (RN-05)</span>
+          </div>
+
+          <div class="form-grid" style="grid-template-columns: 2fr 1fr 1fr;">
+            <div class="form-group">
+              <label for="cepas-select">Cepa</label>
+              <select id="cepas-select" required></select>
+            </div>
+            <div class="form-group">
+              <label for="cepa-porcentaje">Porcentaje (%)</label>
+              <input type="number" id="cepa-porcentaje" required min="0" max="100" step="0.01" placeholder="85">
+            </div>
+            <div class="form-group" style="align-self: end;">
+              <button type="button" id="btn-agregar-cepa" class="btn btn-primary btn-small">+ Agregar Cepa</button>
+            </div>
+          </div>
+
+          <div id="cepas-container">
+            <!-- Se llenan dinámicamente -->
+          </div>
+
+          <div class="form-actions" style="margin-top: 1rem;">
+            <div style="font-weight: 600; color: var(--color-text-muted);">
+              Suma actual: <span id="suma-porcentajes">0</span>%
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions" style="margin-top: 1.5rem;">
+          <button type="button" id="btn-cancelar" class="btn btn-outline">Cancelar</button>
+          <button type="submit" id="btn-guardar-vino" class="btn btn-success">Crear Vino</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    (async () => {
+      const alertArea = document.getElementById('alert-area');
+      const formVino = document.getElementById('form-vino');
+      const btnCancelar = document.getElementById('btn-cancelar');
+      const btnAgregarCepa = document.getElementById('btn-agregar-cepa');
+      const btnGuardarVino = document.getElementById('btn-guardar-vino');
+      const cepasContainer = document.getElementById('cepas-container');
+      const sumaPorcentajes = document.getElementById('suma-porcentajes');
+
+      let cepasSeleccionadas = []; // { id_cepa, nombre, porcentaje }
+      let cepasDisponibles = [];
+
+      function mostrarAlerta(tipo, mensaje) {
+        alertArea.innerHTML = `<div class="alert alert-${tipo}">${mensaje}</div>`;
+      }
+
+      function limpiarAlerta() {
+        alertArea.innerHTML = '';
+      }
+
+      async function cargarDatosIniciales() {
+        try {
+          const [bodegasResp, cepasResp] = await Promise.all([
+            fetch(`${CONFIG.API_BASE_URL}/bodegas`).then(r => r.json()),
+            fetch(`${CONFIG.API_BASE_URL}/cepa`).then(r => r.json())
+          ]);
+
+          const bodegas = bodegasResp || [];
+          cepasDisponibles = cepasResp || [];
+
+          const selectBodega = document.getElementById('vino-bodega');
+          selectBodega.innerHTML = '<option value="">Seleccionar bodega...</option>' +
+            bodegas.map(b => `<option value="${b.id_bodega}">${b.razon_social}</option>`).join('');
+
+          const selectCepa = document.getElementById('cepas-select');
+          selectCepa.innerHTML = '<option value="">Seleccionar cepa...</option>' +
+            cepasDisponibles.map(c => `<option value="${c.id_cepa}">${c.nombre} (${c.tipo})</option>`).join('');
+        } catch (err) {
+          console.error(err);
+          mostrarAlerta('error', `Error cargando datos iniciales: ${API.formatearErrorParaUsuario(err)}`);
+        }
+      }
+
+      function calcularSuma() {
+        return cepasSeleccionadas.reduce((sum, c) => sum + parseFloat(c.porcentaje), 0);
+      }
+
+      function actualizarSuma() {
+        const suma = calcularSuma().toFixed(2);
+        sumaPorcentajes.textContent = suma;
+        const esValida = Math.abs(suma - 100) < 0.01;
+        btnGuardarVino.disabled = cepasSeleccionadas.length === 0 || !esValida;
+        if (!esValida) {
+          btnGuardarVino.title = 'La suma de porcentajes debe ser exactamente 100';
+        } else {
+          btnGuardarVino.title = '';
+        }
+      }
+
+      btnAgregarCepa.addEventListener('click', () => {
+        const selectCepa = document.getElementById('cepas-select');
+        const inputPorcentaje = document.getElementById('cepa-porcentaje');
+
+        const idCepa = parseInt(selectCepa.value);
+        const porcentaje = parseFloat(inputPorcentaje.value);
+
+        if (!idCepa || !porcentaje || porcentaje < 0 || porcentaje > 100) {
+          mostrarAlerta('error', 'Seleccioná una cepa y un porcentaje válido (0-100).');
+          return;
+        }
+
+        if (cepasSeleccionadas.some(c => c.id_cepa === idCepa)) {
+          mostrarAlerta('error', 'Esa cepa ya está agregada.');
+          return;
+        }
+
+        const cepaObj = cepasDisponibles.find(c => c.id_cepa === idCepa);
+        cepasSeleccionadas.push({
+          id_cepa: idCepa,
+          nombre: cepaObj ? cepaObj.nombre : '',
+          porcentaje: porcentaje
+        });
+
+        inputPorcentaje.value = '';
+        renderizarCepas();
+        actualizarSuma();
+      });
+
+      function renderizarCepas() {
+        if (cepasSeleccionadas.length === 0) {
+          cepasContainer.innerHTML = '<div class="empty-state" style="padding:1rem;"><p>No hay cepas agregadas.</p></div>';
+          return;
+        }
+
+        const filas = cepasSeleccionadas.map((c, idx) => `
+          <tr style="display:table;width:100%;margin-bottom:0.5rem;">
+            <td style="padding:0.5rem 1rem;display:table-cell;">
+              <strong>${c.nombre}</strong>
+            </td>
+            <td style="padding:0.5rem 1rem;display:table-cell;text-align:center;">
+              ${c.porcentaje}%
+            </td>
+            <td style="padding:0.5rem 1rem;display:table-cell;text-align:right;">
+              <button type="button" data-idx="${idx}" class="btn btn-danger btn-small" onclick="eliminarCepa(${idx})">×</button>
+            </td>
+          </tr>
+        `).join('');
+
+        cepasContainer.innerHTML = `
+          <table style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr>
+                <th style="text-align:left;padding:0.5rem 1rem;border-bottom:2px solid var(--color-border);">Cepa</th>
+                <th style="text-align:center;padding:0.5rem 1rem;border-bottom:2px solid var(--color-border);">Porcentaje</th>
+                <th style="text-align:right;padding:0.5rem 1rem;border-bottom:2px solid var(--color-border);">Acción</th>
+              </tr>
+            </thead>
+            <tbody>${filas}</tbody>
+          </table>
+        `;
+      }
+
+      window.eliminarCepa = (idx) => {
+        cepasSeleccionadas.splice(idx, 1);
+        renderizarCepas();
+        actualizarSuma();
+      };
+
+      btnCancelar.addEventListener('click', () => {
+        window.location.href = 'vinos.html';
+      });
+
+      formVino.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        limpiarAlerta();
+
+        const bodegaId = parseInt(document.getElementById('vino-bodega').value);
+        const nombre = document.getElementById('vino-nombre').value;
+        const tipo = document.getElementById('vino-tipo').value;
+        const anada = parseInt(document.getElementById('vino-anada').value);
+        const volumen_ml = parseInt(document.getElementById('vino-volumen').value);
+        const graduacion = parseFloat(document.getElementById('vino-graduacion').value);
+        const precio = parseFloat(document.getElementById('vino-precio').value);
+
+        const suma = calcularSuma();
+        if (Math.abs(suma - 100) > 0.01) {
+          mostrarAlerta('error', `La suma de porcentajes debe ser exactamente 100. Actualmente: ${suma.toFixed(2)}% (RN-05)`);
+          return;
+        }
+
+        const payload = {
+          id_bodega: bodegaId,
+          nombre: nombre,
+          tipo: tipo,
+          anada: anada,
+          volumen_ml: volumen_ml,
+          graduacion: graduacion,
+          precio: precio,
+          composicion: cepasSeleccionadas.map(c => ({
+            id_cepa: c.id_cepa,
+            porcentaje: c.porcentaje
+          }))
+        };
+
+        btnGuardarVino.disabled = true;
+        btnGuardarVino.textContent = 'Creando...';
+
+        try {
+          await API.crearVino(payload);
+          mostrarAlerta('success', 'Vino creado correctamente.');
+          setTimeout(() => {
+            window.location.href = 'vinos.html';
+          }, 1500);
+        } catch (err) {
+          console.error(err);
+          mostrarAlerta('error', API.formatearErrorParaUsuario(err));
+        } finally {
+          btnGuardarVino.disabled = false;
+          btnGuardarVino.textContent = 'Crear Vino';
+        }
+      });
+
+      cargarDatosIniciales();
+    })();
+  </script>
+</body>
+</html>

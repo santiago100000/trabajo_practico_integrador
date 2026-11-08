@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bodegas del Atuel — Transferencias</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Transferencias</h1>
+    <div class="header-actions">
+      <a href="index.html" class="btn btn-outline">← Volver</a>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="page-title">
+      <span>🚚</span> Transferencias Depósito → Sala
+    </div>
+
+    <div id="alert-area"></div>
+
+    <!-- Nueva transferencia -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Nueva Transferencia</h2>
+      </div>
+      <form id="form-transferencia">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="tr-sala">Sala Solicitante</label>
+            <select id="tr-sala" required></select>
+          </div>
+          <div class="form-group">
+            <label for="tr-observaciones">Observaciones</label>
+            <input type="text" id="tr-observaciones" placeholder="Observaciones (opcional)">
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 1rem;">
+          <div class="card-header">
+            <h2>Renglones de Transferencia</h2>
+            <select id="tr-vino-select" class="select-wine">
+              <option value="">Seleccionar vino...</option>
+            </select>
+            <button type="button" id="tr-btn-agregar-renglon" class="btn btn-primary btn-small">+ Agregar Vino</button>
+          </div>
+
+          <div id="tr-renglones-container">
+            <!-- Se llenan dinámicamente -->
+          </div>
+
+          <div class="form-actions" style="margin-top: 1rem;">
+            <button type="button" id="tr-btn-cancelar" class="btn btn-outline">Cancelar</button>
+            <button type="submit" id="tr-btn-guardar" class="btn btn-success">Crear Transferencia</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Transferencias existentes -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Transferencias Existentes</h2>
+      </div>
+      <div id="tr-listado-container">
+        <!-- Se llenan por JS -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (async () => {
+      const alertArea = document.getElementById('alert-area');
+      const formTransferencia = document.getElementById('form-transferencia');
+      const selectSala = document.getElementById('tr-sala');
+      const selectVino = document.getElementById('tr-vino-select');
+      const btnAgregarRenglon = document.getElementById('tr-btn-agregar-renglon');
+      const btnGuardar = document.getElementById('tr-btn-guardar');
+      const btnCancelar = document.getElementById('tr-btn-cancelar');
+      const renglonesContainer = document.getElementById('tr-renglones-container');
+      const listadoContainer = document.getElementById('tr-listado-container');
+
+      let salas = [];
+      let vinos = [];
+      let renglones = [];
+      let transferencias = [];
+
+      function mostrarAlerta(tipo, mensaje) {
+        alertArea.innerHTML = `<div class="alert alert-${tipo}">${mensaje}</div>`;
+      }
+
+      function limpiarAlerta() {
+        alertArea.innerHTML = '';
+      }
+
+      async function cargarDatosIniciales() {
+        try {
+          const [salasResp, vinosResp] = await Promise.all([
+            API.listarSalas(),
+            API.listarVinos({ limit: 100 })
+          ]);
+          salas = salasResp || [];
+          vinos = vinosResp || [];
+
+          selectSala.innerHTML = '<option value="">Seleccionar sala...</option>' +
+            salas.map(s => `<option value="${s.id_sala}">${s.calle} ${s.numero}, ${s.localidad}</option>`).join('');
+
+          selectVino.innerHTML = '<option value="">Seleccionar vino...</option>' +
+            vinos.map(v => `<option value="${v.cod_vino}">${v.nombre} (${v.tipo}, ${v.anada}) - Stock: ${v.stock_total || 0}</option>`).join('');
+        } catch (err) {
+          console.error(err);
+          mostrarAlerta('error', `Error cargando datos: ${API.formatearErrorParaUsuario(err)}`);
+        }
+      }
+
+      function renderizarRenglones() {
+        if (renglones.length === 0) {
+          renglonesContainer.innerHTML = '<div class="empty-state" style="padding:1rem;"><p>No hay vinos agregados.</p></div>';
+          return;
+        }
+
+        const filas = renglones.map((r, idx) => `
+          <tr style="display:table;width:100%;margin-bottom:0.5rem;">
+            <td style="padding:0.5rem 1rem;display:table-cell;">
+              <strong>${r.nombre_vino}</strong>
+            </td>
+            <td style="padding:0.5rem 1rem;display:table-cell;">
+              <input type="number" value="${r.cantidad}" min="1" data-idx="${idx}" class="input-cantidad" style="width:80px;">
+            </td>
+            <td style="padding:0.5rem 1rem;display:table-cell;text-align:right;">
+              <button type="button" data-idx="${idx}" class="btn btn-danger btn-small btn-eliminar-renglon">×</button>
+            </td>
+          </tr>
+        `).join('');
+
+        renglonesContainer.innerHTML = `
+          <table style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr>
+                <th style="text-align:left;padding:0.5rem 1rem;border-bottom:2px solid var(--color-border);">Vino</th>
+                <th style="text-align:left;padding:0.5rem 1rem;border-bottom:2px solid var(--color-border);">Cantidad</th>
+                <th style="text-align:right;padding:0.5rem 1rem;border-bottom:2px solid var(--color-border);">Acción</th>
+              </tr>
+            </thead>
+            <tbody>${filas}</tbody>
+          </table>
+        `;
+
+        document.querySelectorAll('.input-cantidad').forEach(input => {
+          input.addEventListener('change', (e) => {
+            const idx = parseInt(e.target.dataset.idx);
+            const nuevo = parseInt(e.target.value) || 1;
+            renglones[idx].cantidad = Math.max(1, nuevo);
+          });
+        });
+
+        document.querySelectorAll('.btn-eliminar-renglon').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const idx = parseInt(btn.dataset.idx);
+            renglones.splice(idx, 1);
+            renderizarRenglones();
+          });
+        });
+      }
+
+      btnAgregarRenglon.addEventListener('click', () => {
+        if (vinos.length === 0) {
+          mostrarAlerta('warning', 'No hay vinos disponibles.');
+          return;
+        }
+
+        const codVino = parseInt(selectVino.value);
+        if (!codVino) {
+          mostrarAlerta('warning', 'Seleccioná un vino.');
+          return;
+        }
+
+        const vino = vinos.find(v => v.cod_vino === codVino);
+        const existe = renglones.find(r => r.cod_vino === codVino);
+
+        if (existe) {
+          existe.cantidad += 1;
+        } else {
+          renglones.push({
+            cod_vino: vino.cod_vino,
+            nombre_vino: vino.nombre,
+            cantidad: 1
+          });
+        }
+        selectVino.value = '';
+        renderizarRenglones();
+      });
+
+      btnCancelar.addEventListener('click', () => {
+        window.location.href = 'transferencias.html';
+      });
+
+      formTransferencia.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        limpiarAlerta();
+
+        const idSala = parseInt(selectSala.value);
+        const observaciones = document.getElementById('tr-observaciones').value || null;
+
+        if (!idSala) {
+          mostrarAlerta('warning', 'Seleccioná una sala.');
+          return;
+        }
+
+        if (renglones.length === 0) {
+          mostrarAlerta('warning', 'Agregá al menos un vino.');
+          return;
+        }
+
+        btnGuardar.disabled = true;
+        btnGuardar.textContent = 'Creando...';
+
+        try {
+          const resultado = await API.crearTransferencia({
+            id_sala: idSala,
+            observaciones: observaciones
+          });
+
+          const nroSolicitud = resultado.nro_solicitud;
+
+          // Agregar renglones uno por uno
+          for (const r of renglones) {
+            await API.agregarRenglonTransferencia(nroSolicitud, {
+              cod_vino: r.cod_vino,
+              cantidad: r.cantidad
+            });
+          }
+
+          mostrarAlerta('success', `Transferencia N° ${nroSolicitud} creada correctamente.`);
+          setTimeout(() => {
+            window.location.href = 'transferencias.html';
+          }, 1500);
+        } catch (err) {
+          console.error(err);
+          mostrarAlerta('error', API.formatearErrorParaUsuario(err));
+        } finally {
+          btnGuardar.disabled = false;
+          btnGuardar.textContent = 'Crear Transferencia';
+        }
+      });
+
+      async function cargarTransferencias() {
+        try {
+          // Reutilizamos listarVinos para obtener datos, pero necesitamos un endpoint de transferencias
+          // Como no hay endpoint de listado de transferencias en la API, consultamos directamente
+          const response = await fetch(`${CONFIG.API_BASE_URL}/transferencias`);
+          if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.mensaje || 'Error cargando transferencias');
+          }
+          transferencias = await response.json();
+        } catch (err) {
+          console.error(err);
+          listadoContainer.innerHTML = `<div class="empty-state"><p>Error cargando transferencias: ${API.formatearErrorParaUsuario(err)}</p></div>`;
+          return;
+        }
+
+        if (!transferencias || transferencias.length === 0) {
+          listadoContainer.innerHTML = '<div class="empty-state"><p>No hay transferencias registradas.</p></div>';
+          return;
+        }
+
+        const filas = transferencias.map(t => {
+          const badgeEstado = (estado) => {
+            const clases = {
+              'en_confeccion': 'badge-warning',
+              'terminado': 'badge-info',
+              'procesado': 'badge-success'
+            };
+            return `<span class="badge ${clases[estado] || 'badge-secondary'}">${estado}</span>`;
+          };
+
+          return `
+            <tr>
+              <td>#${t.nro_solicitud}</td>
+              <td>Sala ${t.id_sala}</td>
+              <td>${badgeEstado(t.estado)}</td>
+              <td>${t.observaciones || '-'}</td>
+              <td>
+                ${t.estado === 'en_confeccion' ?
+                  `<button type="button" class="btn btn-primary btn-small" onclick="terminarTransferencia(${t.nro_solicitud})">Terminar</button>` :
+                  (t.estado === 'terminado' ?
+                    `<button type="button" class="btn btn-success btn-small" onclick="procesarTransferencia(${t.nro_solicitud})">Procesar</button>` :
+                    `<span class="badge badge-success">Procesado</span>`
+                  )}
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        listadoContainer.innerHTML = `
+          <table style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr>
+                <th style="text-align:left;padding:0.5rem 1rem;border-bottom:2px solid var(--color-border);">N° Solicitud</th>
+                <th style="text-align:left;padding:0.5rem 1rem;border-bottom:2px solid var(--color-border);">Sala</th>
+                <th style="text-align:left;padding:0.5rem 1rem;border-bottom:2px solid var(--color-border);">Estado</th>
+                <th style="text-align:left;padding:0.5rem 1rem;border-bottom:2px solid var(--color-border);">Observaciones</th>
+                <th style="text-align:left;padding:0.5rem 1rem;border-bottom:2px solid var(--color-border);">Acción</th>
+              </tr>
+            </thead>
+            <tbody>${filas}</tbody>
+          </table>
+        `;
+
+        document.querySelectorAll('.btn-eliminar-renglon').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const idx = parseInt(btn.dataset.idx);
+            renglones.splice(idx, 1);
+            renderizarRenglones();
+          });
+        });
+      }
+
+      window.terminarTransferencia = async (nro) => {
+        if (!confirm('¿Terminar esta transferencia?')) return;
+        try {
+          await API.terminarTransferencia(nro);
+          mostrarAlerta('success', 'Transferencia terminada.');
+          cargarTransferencias();
+        } catch (err) {
+          mostrarAlerta('error', API.formatearErrorParaUsuario(err));
+        }
+      };
+
+      window.procesarTransferencia = async (nro) => {
+        if (!confirm('¿Procesar esta transferencia? Esto descuenta del depósito y suma a la sala.')) return;
+        try {
+          await API.procesarTransferencia(nro);
+          mostrarAlerta('success', 'Transferencia procesada. Stock movido a la sala.');
+          cargarTransferencias();
+        } catch (err) {
+          mostrarAlerta('error', API.formatearErrorParaUsuario(err));
+        }
+      };
+
+      cargarDatosIniciales();
+      cargarTransferencias();
+    })();
+  </script>
+</body>
+</html>

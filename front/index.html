@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="css/style.css">
   <script src="js/config.js"></script>
   <script src="js/api.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <header>
@@ -15,24 +16,22 @@
       <a href="vinos.html" class="btn btn-outline">Vinos</a>
       <a href="clientes.html" class="btn btn-outline">Clientes</a>
       <a href="ventas.html" class="btn btn-success">Nueva Venta</a>
+      <a href="transferencias.html" class="btn btn-outline">Transferencias</a>
       <a href="reportes.html" class="btn btn-outline">Reportes</a>
     </div>
   </header>
 
   <div class="main">
-    <div class="page-title">
-      Dashboard
-    </div>
-
     <div id="alert-area"></div>
 
     <div class="metrics" id="metrics-container">
       <!-- Se llenan por JS -->
     </div>
 
+    <!-- Top vinos -->
     <div class="card">
       <div class="card-header">
-        <h2>Top Vinos Más Vendidos</h2>
+        <h2>Top 10 Vinos Más Vendidos</h2>
         <a href="vinos.html" class="btn btn-small btn-outline">Ver todos los vinos</a>
       </div>
       <div id="top-vinos-container">
@@ -40,14 +39,45 @@
       </div>
     </div>
 
+    <!-- Ventas por sala con gráfico -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Ventas por Sala (Último Trimestre)</h2>
+      </div>
+      <div id="ventas-sala-container">
+        <!-- Se llenan por JS -->
+        <canvas id="grafico-ventas-sala" style="max-height: 300px;"></canvas>
+      </div>
+    </div>
+
+    <!-- Vinos sin stock en sala -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Vinos sin Stock en Sala</h2>
+        <div style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+          <label for="sala-sin-stock">Sala:</label>
+          <select id="sala-sin-stock">
+            <option value="">Cargando salas...</option>
+          </select>
+          <button id="btn-ver-sin-stock" class="btn btn-primary btn-small">Ver</button>
+        </div>
+      </div>
+      <div id="vinos-sin-stock-container">
+        <!-- Se llenan por JS -->
+      </div>
+    </div>
+
+    <!-- Acciones rápidas -->
     <div class="card">
       <div class="card-header">
         <h2>Acciones Rápidas</h2>
       </div>
       <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
         <a href="vinos.html" class="btn btn-primary">Gestionar Vinos</a>
+        <a href="alta-vino.html" class="btn btn-primary">+ Nuevo Vino</a>
         <a href="clientes.html" class="btn btn-primary">Gestionar Clientes</a>
         <a href="ventas.html" class="btn btn-success">Registrar Venta</a>
+        <a href="transferencias.html" class="btn btn-outline">Transferencias</a>
         <a href="reportes.html" class="btn btn-outline">Ver Reportes</a>
       </div>
     </div>
@@ -58,45 +88,46 @@
       const alertArea = document.getElementById('alert-area');
       const metricsContainer = document.getElementById('metrics-container');
       const topVinosContainer = document.getElementById('top-vinos-container');
+      const ventasSalaContainer = document.getElementById('ventas-sala-container');
+      const selectSala = document.getElementById('sala-sin-stock');
+      const btnVerSinStock = document.getElementById('btn-ver-sin-stock');
+      const vinosSinStockContainer = document.getElementById('vinos-sin-stock-container');
 
       function mostrarAlerta(tipo, mensaje) {
-        alertArea.innerHTML = `
-          <div class="alert alert-${tipo}">${mensaje}</div>
-        `;
+        alertArea.innerHTML = `<div class="alert alert-${tipo}">${mensaje}</div>`;
       }
 
-      try {
-        const salud = await API.salud();
-        console.log('API conectada:', salud);
+      async function verificarAPI() {
+        const ok = await API.verificarConectividad();
+        if (!ok) {
+          mostrarAlerta('error', 'No se puede conectar con la API. Verificá que el servidor esté corriendo en http://localhost:8001');
+          return false;
+        }
+        return true;
+      }
 
-        const topVinos = await API.reporteTopVinos();
+      async function cargarSalas() {
+        try {
+          const salas = await API.listarSalas();
+          selectSala.innerHTML = '<option value="">Seleccionar sala...</option>' +
+            salas.map(s => `<option value="${s.id_sala}">${s.calle} ${s.numero}, ${s.localidad}</option>`).join('');
+        } catch (err) {
+          console.error(err);
+          selectSala.innerHTML = '<option value="">Error cargando salas</option>';
+        }
+      }
 
-        metricsContainer.innerHTML = `
-          <div class="metric">
-            <div class="label">Vinos en catálogo</div>
-            <div class="value" id="met-vinos">-</div>
-          </div>
-          <div class="metric">
-            <div class="label">Ventas hoy</div>
-            <div class="value" id="met-ventas">-</div>
-          </div>
-          <div class="metric">
-            <div class="label">Clientes activos</div>
-            <div class="value" id="met-clientes">-</div>
-          </div>
-          <div class="metric">
-            <div class="label">Stock total unidades</div>
-            <div class="value" id="met-stock">-</div>
-          </div>
-        `;
-
-        if (topVinos.length === 0) {
-          topVinosContainer.innerHTML = '<div class="empty-state"><h3>Sin datos de ventas aún</h3><p>Registra la primera venta para ver el ranking.</p></div>';
-        } else {
-          const filas = topVinos.slice(0, 5).map((v, i) => `
+      async function cargarTopVinos() {
+        try {
+          const vinos = await API.reporteTopVinos();
+          if (!vinos || vinos.length === 0) {
+            topVinosContainer.innerHTML = '<div class="empty-state"><p>Sin datos de ventas aún.</p></div>';
+            return;
+          }
+          const filas = vinos.slice(0, 10).map((v, i) => `
             <tr>
               <td>${i + 1}</td>
-              <td>${v.nombre}</td>
+              <td><strong>${v.nombre}</strong></td>
               <td>${v.tipo}</td>
               <td>${v.anada}</td>
               <td>${v.botellas_vendidas}</td>
@@ -105,18 +136,133 @@
           topVinosContainer.innerHTML = `
             <table>
               <thead>
-                <tr>
-                  <th>#</th><th>Vino</th><th>Tipo</th><th>Añada</th><th>Botellas vendidas</th>
-                </tr>
+                <tr><th>#</th><th>Vino</th><th>Tipo</th><th>Añada</th><th>Botellas vendidas</th></tr>
               </thead>
               <tbody>${filas}</tbody>
             </table>
           `;
+        } catch (err) {
+          console.error(err);
+          topVinosContainer.innerHTML = `<div class="alert alert-error">${API.formatearErrorParaUsuario(err)}</div>`;
         }
+      }
 
-      } catch (err) {
-        console.error('Error conectando con la API:', err);
-        mostrarAlerta('error', `No se pudo conectar con la API: ${API.formatearErrorParaUsuario(err)}`);
+      async function cargarVentasSala() {
+        try {
+          const datos = await API.reporteVentasPorSala();
+          const container = document.getElementById('ventas-sala-container');
+
+          if (!datos || datos.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p>Sin datos de ventas.</p></div>';
+            return;
+          }
+
+          // Tabla
+          const filas = datos.map(d => `
+            <tr>
+              <td><strong>Sala ${d.id_sala}</strong></td>
+              <td>${d.calle || ''} ${d.numero || ''}</td>
+              <td>$${Number(d.ventas_totales).toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+            </tr>
+          `).join('');
+
+          container.innerHTML = `
+            <table style="margin-bottom:1rem;">
+              <thead>
+                <tr><th>Sala</th><th>Dirección</th><th>Ventas Totales (trimestre)</th></tr>
+              </thead>
+              <tbody>${filas}</tbody>
+            </table>
+            <canvas id="grafico-ventas-sala" style="max-height: 300px;"></canvas>
+          `;
+
+          // Gráfico con Chart.js
+          const ctx = document.getElementById('grafico-ventas-sala').getContext('2d');
+          new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: datos.map(d => `Sala ${d.id_sala}`),
+              datasets: [{
+                label: 'Ventas Totales',
+                data: datos.map(d => Number(d.ventas_totales)),
+                backgroundColor: 'rgba(114, 47, 55, 0.7)',
+                borderColor: 'rgba(114, 47, 55, 1)',
+                borderWidth: 1
+              }]
+            },
+            options: {
+              responsive: true,
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  ticks: {
+                    callback: value => '$' + value.toLocaleString('es-AR')
+                  }
+                }
+              },
+              plugins: {
+                legend: { display: false },
+                title: {
+                  display: true,
+                  text: 'Ventas por Sala - Último Trimestre'
+                }
+              }
+            }
+          });
+        } catch (err) {
+          console.error(err);
+          container.innerHTML = `<div class="alert alert-error">${API.formatearErrorParaUsuario(err)}</div>`;
+        }
+      }
+
+      async function cargarVinosSinStock(idSala) {
+        try {
+          const datos = await API.reporteVinosSinStock(idSala);
+          const container = document.getElementById('vinos-sin-stock-container');
+          if (!datos || datos.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p>Todos los vinos tienen stock en esta sala, o no hay datos.</p></div>';
+            return;
+          }
+          const filas = datos.map(d => `
+            <tr>
+              <td>${d.cod_vino}</td>
+              <td><strong>${d.nombre}</strong></td>
+              <td>${d.tipo}</td>
+              <td>${d.anada}</td>
+            </tr>
+          `).join('');
+          container.innerHTML = `
+            <table>
+              <thead>
+                <tr><th>Código</th><th>Vino</th><th>Tipo</th><th>Añada</th></tr>
+              </thead>
+              <tbody>${filas}</tbody>
+            </table>
+          `;
+        } catch (err) {
+          console.error(err);
+          vinosSinStockContainer.innerHTML = `<div class="alert alert-error">${API.formatearErrorParaUsuario(err)}</div>`;
+        }
+      }
+
+      btnVerSinStock.addEventListener('click', (e) => {
+        e.preventDefault();
+        const idSala = selectSala.value;
+        if (!idSala) {
+          mostrarAlerta('warning', 'Seleccioná una sala.');
+          return;
+        }
+        cargarVinosSinStock(idSala);
+      });
+
+      async function init() {
+        await cargarSalas();
+        cargarTopVinos();
+        cargarVentasSala();
+      }
+
+      if (await verificarAPI()) {
+        init();
       }
     })();
   </script>

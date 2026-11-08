@@ -10,6 +10,8 @@ const comprobantesRoutes = require('./routes/comprobantesRoutes');
 const transferenciasRoutes = require('./routes/transferenciasRoutes');
 const ingresosRoutes = require('./routes/ingresosRoutes');
 const reportesRoutes = require('./routes/reportesRoutes');
+const cepasRoutes = require('./routes/cepasRoutes');
+const bodegasRoutes = require('./routes/bodegasRoutes');
 
 const app = express();
 
@@ -24,6 +26,8 @@ app.use(comprobantesRoutes);
 app.use(transferenciasRoutes);
 app.use(ingresosRoutes);
 app.use(reportesRoutes);
+app.use(cepasRoutes);
+app.use(bodegasRoutes);
 
 app.use(errorHandler);
 

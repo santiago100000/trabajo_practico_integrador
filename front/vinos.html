@@ -13,13 +13,14 @@
     <h1>Vinos</h1>
     <div class="header-actions">
       <a href="index.html" class="btn btn-outline">← Volver</a>
-      <a href="ventas.html" class="btn btn-success">Nueva Venta</a>
+      <a href="alta-vino.html" class="btn btn-success">+ Nuevo Vino</a>
+      <a href="ventas.html" class="btn btn-outline">Nueva Venta</a>
     </div>
   </header>
 
   <div class="main">
     <div class="page-title">
-      Catálogo de Vinos
+      <span>🍷</span> Catálogo de Vinos
     </div>
 
     <div id="alert-area"></div>
@@ -27,7 +28,7 @@
     <div class="card">
       <div class="card-header">
         <h2>Listado de Vinos</h2>
-        <div style="display: flex; gap: 1rem; align-items: center;">
+        <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;">
           <input type="text" id="filtro-nombre" placeholder="Buscar por nombre...">
           <select id="filtro-tipo">
             <option value="">Todos los tipos</option>
@@ -35,6 +36,18 @@
             <option value="blanco">Blanco</option>
             <option value="rosado">Rosado</option>
             <option value="espumante">Espumante</option>
+          </select>
+          <select id="filtro-bodega">
+            <option value="">Todas las bodegas</option>
+            <!-- Se llena por JS -->
+          </select>
+          <select id="filtro-cepa">
+            <option value="">Todas las cepas</option>
+            <!-- Se llena por JS -->
+          </select>
+          <select id="filtro-anada">
+            <option value="">Todas las añadas</option>
+            <!-- Se llena por JS -->
           </select>
           <button id="btn-aplicar-filtros" class="btn btn-primary btn-small">Filtrar</button>
         </div>
@@ -58,9 +71,15 @@
       const vinosContainer = document.getElementById('vinos-container');
       const filtroNombre = document.getElementById('filtro-nombre');
       const filtroTipo = document.getElementById('filtro-tipo');
+      const filtroBodega = document.getElementById('filtro-bodega');
+      const filtroCepa = document.getElementById('filtro-cepa');
+      const filtroAnada = document.getElementById('filtro-anada');
       const btnAplicar = document.getElementById('btn-aplicar-filtros');
 
       let paginaActual = 1;
+      let bodegasDisponibles = [];
+      let cepasDisponibles = [];
+      let anadasDisponibles = [];
 
       function mostrarAlerta(tipo, mensaje) {
         alertArea.innerHTML = `<div class="alert alert-${tipo}">${mensaje}</div>`;
@@ -75,6 +94,43 @@
         return true;
       }
 
+      async function cargarFiltros() {
+        try {
+          // Obtener vinos para extraer valores únicos de filtros
+          const vinos = await API.listarVinos({ limit: 1000 });
+          if (vinos) {
+            const bodegasSet = new Set();
+            const anadasSet = new Set();
+            vinos.forEach(v => {
+              if (v.bodega) bodegasSet.add(v.bodega);
+              if (v.anada) anadasSet.add(v.anada);
+            });
+            bodegasDisponibles = Array.from(bodegasSet).sort();
+            anadasDisponibles = Array.from(anadasSet).sort().reverse();
+
+            filtroBodega.innerHTML = '<option value="">Todas las bodegas</option>' +
+              bodegasDisponibles.map(b => `<option value="${b}">${b}</option>`).join('');
+
+            filtroAnada.innerHTML = '<option value="">Todas las añadas</option>' +
+              anadasDisponibles.map(a => `<option value="${a}">${a}</option>`).join('');
+          }
+
+          // Cargar cepas
+          try {
+            const cepasResp = await fetch(`${CONFIG.API_BASE_URL}/cepa`);
+            const cepas = await cepasResp.json();
+            cepasDisponibles = cepas || [];
+            filtroCepa.innerHTML = '<option value="">Todas las cepas</option>' +
+              cepasDisponibles.map(c => `<option value="${c.id_cepa}">${c.nombre}</option>`).join('');
+          } catch (e) {
+            console.error('Error cargando cepas:', e);
+          }
+        } catch (err) {
+          console.error(err);
+          mostrarAlerta('error', `Error cargando filtros: ${API.formatearErrorParaUsuario(err)}`);
+        }
+      }
+
       async function cargarVinos() {
         const params = {
           page: paginaActual,
@@ -82,6 +138,9 @@
         };
         if (filtroNombre.value.trim()) params.nombre = filtroNombre.value.trim();
         if (filtroTipo.value) params.tipo = filtroTipo.value;
+        if (filtroBodega.value) params.bodega = filtroBodega.value;
+        if (filtroCepa.value) params.cepa = filtroCepa.value;
+        if (filtroAnada.value) params.anada = parseInt(filtroAnada.value);
 
         try {
           const vinos = await API.listarVinos(params);
@@ -130,7 +189,7 @@
             <td>$${Number(v.precio).toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
             <td>${v.stock_total || 0}</td>
             <td>
-              <a href="ventas.html?vino=${v.cod_vino}" class="btn btn-small btn-primary">Vender</a>
+              <a href="alta-vino.html?vino=${v.cod_vino}" class="btn btn-small btn-primary">Editar</button>
             </td>
           </tr>
         `).join('');
@@ -156,6 +215,7 @@
       document.getElementById('btn-pagina-siguiente').addEventListener('click', paginaSiguiente);
 
       if (await verificarAPI()) {
+        cargarFiltros();
         cargarVinos();
       }
     })();

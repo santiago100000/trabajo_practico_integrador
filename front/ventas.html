@@ -114,7 +114,7 @@
                 ${formatoMoneda(r.precio_unitario * r.cantidad)}
               </td>
               <td style="padding:0.5rem 1rem;display:table-cell; text-align:right;">
-                <button type="button" data-idx="${idx}" class="btn btn-danger btn-small" onclick="eliminarRenglon(${idx})">×</button>
+                <button type="button" data-idx="${idx}" class="btn btn-danger btn-small btn-eliminar-renglon">×</button>
               </td>
             </tr>
           `;
@@ -143,6 +143,14 @@
             renderizarRenglones();
           });
         });
+
+        // Listeners para botones de eliminar renglón
+        document.querySelectorAll('.btn-eliminar-renglon').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const idx = parseInt(btn.dataset.idx);
+            eliminarRenglon(idx);
+          });
+        });
       }
 
       window.eliminarRenglon = (idx) => {
@@ -151,37 +159,40 @@
       };
 
       async function cargarDatosIniciales() {
+        // Cargar cada conjunto de datos de forma independiente para que
+        // un fallo en uno no impida cargar los demás
         try {
-          const [clientesResp, salasResp, vinosResp] = await Promise.all([
-            API.listarClientes(),
-            API.listarSalas(),
-            API.listarVinos({ limit: 100 })
-          ]);
-
-          clientes = clientesResp;
-          salas = salasResp;
-          vinosDisponibles = vinosResp;
-
+          clientes = await API.listarClientes();
           selectCliente.innerHTML = clientes.map(c => `
             <option value="${c.id_cliente}" data-tipo="${c.tipo_cliente}" data-descuento="${c.descuento}">
               ${c.nombre_razon_social} (${c.tipo_cliente}, ${c.descuento}% dto.)
             </option>
           `).join('');
+          clienteSeleccionado = clientes[0] || null;
+        } catch (err) {
+          console.error('Error cargando clientes:', err);
+          mostrarAlerta('error', `No se pudieron cargar los clientes: ${err.mensaje || err.message}`);
+        }
 
+        try {
+          salas = await API.listarSalas();
           selectSala.innerHTML = salas.map(s => `
             <option value="${s.id_sala}">${s.calle} ${s.numero}, ${s.localidad}</option>
           `).join('');
+        } catch (err) {
+          console.error('Error cargando salas:', err);
+          selectSala.innerHTML = '<option value="">Error cargando salas</option>';
+        }
 
+        try {
+          vinosDisponibles = await API.listarVinos({ limit: 100 });
           const selectVino = document.getElementById('select-vino-renglon');
-          selectVino.innerHTML = '<option value="">Seleccionar vino...</option>' + vinos.map(v => `
+          selectVino.innerHTML = '<option value="">Seleccionar vino...</option>' + vinosDisponibles.map(v => `
             <option value="${v.cod_vino}">${v.nombre} (${v.tipo}, ${v.anada}) - $${Number(v.precio).toLocaleString('es-AR', {minimumFractionDigits:2})}</option>
           `).join('');
-
-          clienteSeleccionado = clientes[0] || null;
-
         } catch (err) {
-          console.error(err);
-          mostrarAlerta('error', `Error cargando datos iniciales: ${err.mensaje || err.message}`);
+          console.error('Error cargando vinos:', err);
+          mostrarAlerta('error', `No se pudieron cargar los vinos: ${err.mensaje || err.message}`);
         }
       }
 

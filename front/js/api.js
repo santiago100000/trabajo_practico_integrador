@@ -54,6 +54,13 @@ const API = (() => {
         timeoutErr.codigo = 'TIMEOUT';
         throw timeoutErr;
       }
+      // Error de red (ej. conexión rechazada, API no corriendo)
+      if (err.type === 'system' || err.code === 'ECONNREFUSED' || err.message === 'Failed to fetch') {
+        const netErr = new Error('No se puede conectar con la API. Asegúrate de que el servidor esté corriendo en http://localhost:8001');
+        netErr.status = 0;
+        netErr.codigo = 'CONNECTION_ERROR';
+        throw netErr;
+      }
       throw err;
     }
   }

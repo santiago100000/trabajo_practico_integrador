@@ -21,55 +21,64 @@ const API = (() => {
     const config = {
       ...options,
       headers,
-      signal: options.signal || AbortSignal.timeout(CONFIG.REQUEST_TIMEOUT),
     };
 
-    try {
-      const response = await fetch(url, config);
+    // Intentar hasta 3 veces con backoff exponencial ante errores de red
+    let ultimoError;
+    for (let intento = 1; intento <= 3; intento++) {
+      try {
+        const response = await fetch(url, config);
 
-      // Intentar leer el cuerpo como JSON (la API devuelve JSON en errores también)
-      let data;
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
-      } else {
-        data = await response.text();
-      }
+        // Intentar leer el cuerpo como JSON (la API devuelve JSON en errores también)
+        let data;
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          data = await response.json();
+        } else {
+          data = await response.text();
+        }
 
-      if (!response.ok) {
-        // La API ya devuelve { error, codigo, mensaje, detalle } con el status correcto
-        const err = new Error(data.mensaje || data || 'Error en la petición');
-        err.status = response.status;
-        err.codigo = data.codigo;
-        err.detalle = data.detalle;
-        err.body = data;
-        throw err;
-      }
+        if (!response.ok) {
+          // La API ya devuelve { error, codigo, mensaje, detalle } con el status correcto
+          const err = new Error(data.mensaje || data || 'Error en la petición');
+          err.status = response.status;
+          err.codigo = data.codigo;
+          err.detalle = data.detalle;
+          err.body = data;
+          throw err;
+        }
 
-      return data;
-    } catch (err) {
-      if (err.name === 'AbortError') {
-        const timeoutErr = new Error('Tiempo de espera agotado al conectar con la API');
-        timeoutErr.status = 0;
-        timeoutErr.codigo = 'TIMEOUT';
-        throw timeoutErr;
+        return data;
+      } catch (err) {
+        ultimoError = err;
+
+        // Si es un error de HTTP (4xx, 5xx) de la API, no reintentar
+        if (err.status) {
+          throw err;
+        }
+
+        // Error de red: reintentar salvo que sea el último intento
+        const esErrorRed = err.type === 'system'
+          || err.code === 'ECONNREFUSED'
+          || err.code === 'ENOTFOUND'
+          || err.code === 'EHOSTUNREACH'
+          || err.message === 'Failed to fetch'
+          || err.message.includes('network')
+          || err.message.includes('conexión');
+
+        if (!esErrorRed || intento === 3) {
+          const netErr = new Error('No se puede conectar con la API. Verificá que el servidor esté corriendo en http://localhost:8001');
+          netErr.status = 0;
+          netErr.codigo = 'CONNECTION_ERROR';
+          throw netErr;
+        }
+
+        // Esperar antes del siguiente intento (backoff: 500ms, 1000ms)
+        await new Promise(r => setTimeout(r, intento * 500));
       }
-      // Error de red (ej. conexión rechazada, API no corriendo, DNS, etc.)
-      const esErrorRed = err.type === 'system'
-        || err.code === 'ECONNREFUSED'
-        || err.code === 'ENOTFOUND'
-        || err.code === 'EHOSTUNREACH'
-        || err.message === 'Failed to fetch'
-        || err.message.includes('network')
-        || err.message.includes('conexión');
-      if (esErrorRed) {
-        const netErr = new Error('No se puede conectar con la API. Asegúrate de que el servidor esté corriendo en http://localhost:8001');
-        netErr.status = 0;
-        netErr.codigo = 'CONNECTION_ERROR';
-        throw netErr;
-      }
-      throw err;
     }
+
+    throw ultimoError;
   }
 
   // ============================================================================

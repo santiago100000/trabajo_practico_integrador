@@ -158,6 +158,15 @@
         renderizarRenglones();
       };
 
+      async function verificarAPI() {
+        const ok = await API.verificarConectividad();
+        if (!ok) {
+          mostrarAlerta('error', 'No se puede conectar con la API. Verificá que el servidor esté corriendo en http://localhost:8001');
+          return false;
+        }
+        return true;
+      }
+
       async function cargarDatosIniciales() {
         // Cargar cada conjunto de datos de forma independiente para que
         // un fallo en uno no impida cargar los demás
@@ -287,7 +296,9 @@
         }
       });
 
-      cargarDatosIniciales();
+      if (await verificarAPI()) {
+        cargarDatosIniciales();
+      }
     })();
   </script>
 </body>

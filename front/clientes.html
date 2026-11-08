@@ -124,6 +124,15 @@
         return map[tipo] || tipo;
       }
 
+      async function verificarAPI() {
+        const ok = await API.verificarConectividad();
+        if (!ok) {
+          mostrarAlerta('error', 'No se puede conectar con la API. Verificá que el servidor esté corriendo en http://localhost:8001');
+          return false;
+        }
+        return true;
+      }
+
       async function cargarClientes() {
         try {
           const clientes = await API.listarClientes();
@@ -232,7 +241,9 @@
         }
       });
 
-      cargarClientes();
+      if (await verificarAPI()) {
+        cargarClientes();
+      }
     })();
   </script>
 </body>

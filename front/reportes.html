@@ -83,6 +83,15 @@
         alertArea.innerHTML = '';
       }
 
+      async function verificarAPI() {
+        const ok = await API.verificarConectividad();
+        if (!ok) {
+          mostrarAlerta('error', 'No se puede conectar con la API. Verificá que el servidor esté corriendo en http://localhost:8001');
+          return false;
+        }
+        return true;
+      }
+
       function formatoMoneda(valor) {
         return '$' + Number(valor || 0).toLocaleString('es-AR', {minimumFractionDigits: 2});
       }
@@ -241,7 +250,9 @@
         cargarVentasSala();
       }
 
-      init();
+      if (await verificarAPI()) {
+        init();
+      }
     })();
   </script>
 </body>

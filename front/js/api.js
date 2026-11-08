@@ -54,8 +54,15 @@ const API = (() => {
         timeoutErr.codigo = 'TIMEOUT';
         throw timeoutErr;
       }
-      // Error de red (ej. conexión rechazada, API no corriendo)
-      if (err.type === 'system' || err.code === 'ECONNREFUSED' || err.message === 'Failed to fetch') {
+      // Error de red (ej. conexión rechazada, API no corriendo, DNS, etc.)
+      const esErrorRed = err.type === 'system'
+        || err.code === 'ECONNREFUSED'
+        || err.code === 'ENOTFOUND'
+        || err.code === 'EHOSTUNREACH'
+        || err.message === 'Failed to fetch'
+        || err.message.includes('network')
+        || err.message.includes('conexión');
+      if (esErrorRed) {
         const netErr = new Error('No se puede conectar con la API. Asegúrate de que el servidor esté corriendo en http://localhost:8001');
         netErr.status = 0;
         netErr.codigo = 'CONNECTION_ERROR';
@@ -69,7 +76,21 @@ const API = (() => {
   // SALUD
   // ============================================================================
   async function salud() {
-    return request(CONFIG.ENDPOINTS.SALUD);
+    try {
+      return await request(CONFIG.ENDPOINTS.SALUD);
+    } catch (err) {
+      throw new Error('No se puede conectar con la API. Asegúrate de que el servidor esté corriendo en http://localhost:8001');
+    }
+  }
+
+  // Verifica si la API está disponible antes de hacer operaciones
+  async function verificarConectividad() {
+    try {
+      await salud();
+      return true;
+    } catch (err) {
+      return false;
+    }
   }
 
   // ============================================================================
@@ -250,6 +271,7 @@ const API = (() => {
 
   return {
     salud,
+    verificarConectividad,
     listarSalas,
     listarVinos,
     obtenerVino,

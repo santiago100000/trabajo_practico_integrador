@@ -66,6 +66,15 @@
         alertArea.innerHTML = `<div class="alert alert-${tipo}">${mensaje}</div>`;
       }
 
+      async function verificarAPI() {
+        const ok = await API.verificarConectividad();
+        if (!ok) {
+          mostrarAlerta('error', 'No se puede conectar con la API. Verificá que el servidor esté corriendo en http://localhost:8001');
+          return false;
+        }
+        return true;
+      }
+
       async function cargarVinos() {
         const params = {
           page: paginaActual,
@@ -146,7 +155,9 @@
       document.getElementById('btn-pagina-anterior').addEventListener('click', paginaAnterior);
       document.getElementById('btn-pagina-siguiente').addEventListener('click', paginaSiguiente);
 
-      cargarVinos();
+      if (await verificarAPI()) {
+        cargarVinos();
+      }
     })();
   </script>
 </body>

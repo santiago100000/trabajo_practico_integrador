@@ -3,9 +3,9 @@
 ## Estado general del repositorio
 
 **Rama:** `main`  
-**Último commit:** `82d6e3b` (design(front): rediseño minimalista, serio y tecnológico con paleta de vinos)  
+**Último commit:** `85e74a8` (fix(front): corregir conectividad con API en todas las pantallas)  
 **Push a `origin/main`:** ✅ Sincronizado  
-**Última actualización:** 07/11/2026  
+**Última actualización:** 08/11/2026  
 
 **Etapas completadas:** 1, 2, 3, 4, 5, 6, 7  
 **Etapa en curso:** ninguna  

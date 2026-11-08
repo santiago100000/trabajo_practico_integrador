@@ -189,7 +189,9 @@
           mostrarAlerta('success', 'Cliente eliminado correctamente.');
           cargarClientes();
         } catch (err) {
-          mostrarAlerta('error', err.mensaje || err.message || 'Error eliminando cliente');
+          // Mostrar el mensaje real de la API (incluye detalle de FK violation si aplica)
+          const mensaje = err.detalle || err.mensaje || err.message || 'Error eliminando cliente';
+          mostrarAlerta('error', mensaje);
         }
       }
 

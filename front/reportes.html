@@ -123,7 +123,7 @@
           `;
         } catch (err) {
           console.error(err);
-          mostrarAlerta('error', `Error cargando top vinos: ${err.mensaje || err.message}`);
+          mostrarAlerta('error', `Error cargando top vinos: ${API.formatearErrorParaUsuario(err)}`);
         }
       }
 
@@ -152,7 +152,7 @@
           `;
         } catch (err) {
           console.error(err);
-          mostrarAlerta('error', `Error cargando ventas por sala: ${err.mensaje || err.message}`);
+          mostrarAlerta('error', `Error cargando ventas por sala: ${API.formatearErrorParaUsuario(err)}`);
         }
       }
 
@@ -182,7 +182,7 @@
           `;
         } catch (err) {
           console.error(err);
-          mostrarAlerta('error', `Error cargando vinos sin stock: ${err.mensaje || err.message}`);
+          mostrarAlerta('error', `Error cargando vinos sin stock: ${API.formatearErrorParaUsuario(err)}`);
         }
       }
 
@@ -196,6 +196,7 @@
         } catch (err) {
           console.error(err);
           document.getElementById('sala-reporte').innerHTML = '<option value="">Error cargando salas</option>';
+          mostrarAlerta('error', `Error cargando salas: ${API.formatearErrorParaUsuario(err)}`);
         }
       }
 
@@ -240,7 +241,7 @@
           `;
         } catch (err) {
           console.error(err);
-          mostrarAlerta('error', `Error en trazabilidad: ${err.mensaje || err.message}`);
+          mostrarAlerta('error', `Error en trazabilidad: ${API.formatearErrorParaUsuario(err)}`);
         }
       });
 

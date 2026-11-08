@@ -116,7 +116,7 @@
 
       } catch (err) {
         console.error('Error conectando con la API:', err);
-        mostrarAlerta('error', `No se pudo conectar con la API: ${err.mensaje || err.message}. Asegúrate de que el servidor esté corriendo en ${CONFIG.API_BASE_URL}`);
+        mostrarAlerta('error', `No se pudo conectar con la API: ${API.formatearErrorParaUsuario(err)}`);
       }
     })();
   </script>

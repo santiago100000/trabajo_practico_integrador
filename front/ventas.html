@@ -180,7 +180,7 @@
           clienteSeleccionado = clientes[0] || null;
         } catch (err) {
           console.error('Error cargando clientes:', err);
-          mostrarAlerta('error', `No se pudieron cargar los clientes: ${err.mensaje || err.message}`);
+          mostrarAlerta('error', `No se pudieron cargar los clientes: ${API.formatearErrorParaUsuario(err)}`);
         }
 
         try {
@@ -201,7 +201,7 @@
           `).join('');
         } catch (err) {
           console.error('Error cargando vinos:', err);
-          mostrarAlerta('error', `No se pudieron cargar los vinos: ${err.mensaje || err.message}`);
+          mostrarAlerta('error', `No se pudieron cargar los vinos: ${API.formatearErrorParaUsuario(err)}`);
         }
       }
 
@@ -281,8 +281,7 @@
           }, 1500);
         } catch (err) {
           console.error('Error creando comprobante:', err);
-          const msg = err.mensaje || err.message || 'Error inesperado';
-          mostrarAlerta('error', msg);
+          mostrarAlerta('error', API.formatearErrorParaUsuario(err));
         } finally {
           btnGuardar.disabled = false;
           btnGuardar.textContent = 'Generar Comprobante';

@@ -89,7 +89,7 @@
           actualizarPaginacion(vinos.length);
         } catch (err) {
           console.error(err);
-          mostrarAlerta('error', `Error cargando vinos: ${err.mensaje || err.message}`);
+          mostrarAlerta('error', `Error cargando vinos: ${API.formatearErrorParaUsuario(err)}`);
         }
       }
 

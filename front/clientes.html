@@ -189,9 +189,7 @@
           mostrarAlerta('success', 'Cliente eliminado correctamente.');
           cargarClientes();
         } catch (err) {
-          // Mostrar el mensaje real de la API (incluye detalle de FK violation si aplica)
-          const mensaje = err.detalle || err.mensaje || err.message || 'Error eliminando cliente';
-          mostrarAlerta('error', mensaje);
+          mostrarAlerta('error', API.formatearErrorParaUsuario(err));
         }
       }
 
@@ -239,7 +237,7 @@
           document.getElementById('cli-fecha-alta').value = fechaHoy;
           cargarClientes();
         } catch (err) {
-          mostrarAlerta('error', err.mensaje || err.message || 'Error creando cliente');
+          mostrarAlerta('error', API.formatearErrorParaUsuario(err));
         }
       });
 

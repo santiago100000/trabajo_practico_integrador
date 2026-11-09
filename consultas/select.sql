@@ -225,7 +225,8 @@ ORDER BY id_sala, ranking_vinos_por_sala;
 -- S12: Clientes que compraron todos los vinos de una bodega determinada,
 --      y clientes que nunca compraron ningún vino tinto.
 -- Parámetro: bodega id_bodega = 1.
--- Estrategia S12a: NOT EXISTS (división relacional).
+-- Estrategia S12a: GROUP BY + HAVING COUNT DISTINCT (división relacional reescrita
+-- para evitar el timeout >120s del NOT EXISTS correlionado doble original).
 -- Estrategia S12b: NOT EXISTS (anti-join).
 -- ---------------------------------------------------------------------------
 

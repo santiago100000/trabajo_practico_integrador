@@ -4,11 +4,11 @@ Gestión y distribución de una empresa vitivinícola.
 
 ## Integrantes
 
-| Integrante | GitHub |
+| Integrantes | GitHub |
 |------------|--------|
-| Puita Axel | |
-| Cerda Santiago | |
-| Serpa Juan Cruz | |
+| Puita Axel | https://github.com/AXELL991 |
+| Cerda Santiago | https://github.com/santiago100000 |
+| Serpa Juan Cruz | https://github.com/Serpagero |
 
 **Nota:** Los roles son rotativos, por lo que no se asignan responsabilidades fijas por integrante. Todos los integrantes participan en todas las etapas del proyecto.
 
@@ -251,4 +251,4 @@ docker compose down -v
 
 ## Nota sobre el despliegue (Etapa 8)
 
-Por indicación del docente, la **Etapa 8 (despliegue en la nube)** se omite en esta entrega. El sistema está configurado para ejecutarse **exclusivamente en entorno local** mediante Docker Compose. No hay URL pública, ni servidor externo, ni conexión cifrada a proveedor de nube. Todos los servicios (base de datos, API y frontend) se levantan en la máquina local con `docker compose up --build`.
+Por indicación del profesor, la **Etapa 8 (despliegue en la nube)** era opcional y se omite en esta entrega. El sistema está configurado para ejecutarse **exclusivamente en entorno local** mediante Docker Compose. No hay URL pública, ni servidor externo, ni conexión cifrada a proveedor de nube. Todos los servicios (base de datos, API y frontend) se levantan en la máquina local con `docker compose up --build`.
